@@ -442,55 +442,93 @@ function resetAnswers(el, shown) {
 
 let curl = null;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const easeInOut = t => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeInOut = t => 0.5 - 0.5 * Math.cos(Math.PI * t);
 
-// Baut eine biegbare Kopie der Folie: 18 senkrechte Streifen, jeder hängt am rechten Rand des vorigen
-function buildCurl(src) {
-  const N = 18, W = 1280 / N;
-  const root = document.createElement("div"); root.className = "curl";
-  const cast = document.createElement("div"); cast.className = "cast";
-  let parent = root; const segs = [];
-  for (let i = 0; i < N; i++) {
-    const seg = document.createElement("div"); seg.className = "seg";
-    seg.style.left = (i === 0 ? 0 : W) + "px"; seg.style.width = (W + 1.5) + "px";
-    const front = document.createElement("div"); front.className = "seg-front";
-    const clone = src.cloneNode(true);
-    clone.classList.remove("active");
-    clone.querySelectorAll(".ans.show").forEach(a => a.classList.add("noanim"));
-    Object.assign(clone.style, { inset: "auto", top: "0", left: (-i * W) + "px", width: "1280px", height: "720px" });
-    const shade = document.createElement("div"); shade.className = "shade";
-    front.append(clone, shade);
-    const back = document.createElement("div"); back.className = "seg-back";
-    seg.append(front, back);
-    parent.appendChild(seg); parent = seg; segs.push({ seg, shade, back });
+// ---- Seite von der oberen rechten Ecke nach links wegblättern ----
+const RECT = [[0, 0], [1280, 0], [1280, 720], [0, 720]];
+
+// schneidet ein Polygon an der Faltlinie; behält die Seite, auf der d<=0 (front) bzw. d>=0 (folded)
+function clipPoly(poly, M, n, keepFront) {
+  const sgn = keepFront ? -1 : 1;
+  const d = p => ((p[0] - M.x) * n.x + (p[1] - M.y) * n.y) * sgn;
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length], da = d(a), db = d(b);
+    if (da >= 0) out.push(a);
+    if ((da >= 0) !== (db >= 0)) {
+      const k = da / (da - db);
+      out.push([a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]);
+    }
   }
-  stack.append(cast, root);
+  return out;
+}
+const polyCss = pts => pts.length < 3
+  ? "polygon(0px 0px,0px 0px,0px 0px)"
+  : "polygon(" + pts.map(p => `${p[0].toFixed(1)}px ${p[1].toFixed(1)}px`).join(",") + ")";
+const mk = (css, cls = "") => { const e = document.createElement("div"); if (cls) e.className = cls; e.style.cssText = css; return e; };
+
+function buildPeel(turn, under) {
+  // Schatten der abgehobenen Seite auf die darunterliegende Folie
+  const shadowWrap = mk("position:absolute;inset:0;z-index:3;pointer-events:none");
+  const shadowRot = mk("position:absolute;left:0;top:0;width:0;height:0");
+  shadowRot.append(mk("position:absolute;left:-2600px;top:-140px;width:5200px;height:140px;background:linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,.18) 45%, rgba(0,0,0,0))"));
+  shadowWrap.append(shadowRot);
+  // umgeklappte Rückseite (Papier mit leicht durchscheinendem Spiegelbild der Vorderseite)
+  const flapOuter = mk("position:absolute;inset:0;z-index:4;pointer-events:none;filter:drop-shadow(-6px 8px 10px rgba(0,0,0,.4))");
+  const flapClip = mk("position:absolute;inset:0");
+  const flap = mk("position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;background:linear-gradient(90deg,#e7e2d7,#f7f3ea 50%,#e5e0d4)");
+  const ghost = turn.cloneNode(true);
+  ghost.classList.remove("active");
+  ghost.querySelectorAll(".ans.show").forEach(a => a.classList.add("noanim"));
+  Object.assign(ghost.style, { visibility: "visible", opacity: ".08", zIndex: "auto", clipPath: "none" });
+  flap.append(ghost);
+  const hiRot = mk("position:absolute;left:0;top:0;width:0;height:0");
+  hiRot.append(mk("position:absolute;left:-2600px;top:0;width:5200px;height:110px;background:linear-gradient(to bottom, rgba(0,0,0,.34), rgba(255,255,255,.42) 20%, rgba(0,0,0,.07) 70%, rgba(0,0,0,0))"));
+  flapClip.append(flap, hiRot);
+  flapOuter.append(flapClip);
+  stack.append(shadowWrap, flapOuter);
+  turn.style.zIndex = 2; under.style.zIndex = 1;
+
   return {
-    root, cast,
     update(p) {
-      const th = -p * 180;                                   // Drehung um die Buchfalz
-      const per = 52 * Math.sin(Math.PI * clamp(p, 0, 1)) / N; // freier Rand hinkt hinterher: Seite biegt sich
-      let a = th, xEdge = 0;
-      segs.forEach((s, i) => {
-        if (i > 0) a += per;
-        s.seg.style.transform = `rotateY(${i === 0 ? th : per}deg)`;
-        const rad = a * Math.PI / 180;
-        xEdge += W * Math.cos(rad);
-        s.shade.style.opacity = a > -90 ? (0.55 * Math.abs(Math.sin(rad))).toFixed(3) : 0;
-        s.back.style.filter = `brightness(${(0.78 + 0.22 * Math.abs(Math.cos(rad))).toFixed(3)})`;
+      if (p <= 0.0004) {
+        turn.style.clipPath = "none";
+        shadowWrap.style.display = flapOuter.style.display = "none";
+        return;
+      }
+      shadowWrap.style.display = flapOuter.style.display = "";
+      // Die Ecke (1280,0) wird nach links gezogen und dabei leicht nach unten geführt
+      const Q = { x: 1280 - 2700 * p, y: 520 * Math.sin(Math.PI * p) };
+      const dx = 1280 - Q.x, dy = 0 - Q.y, len = Math.hypot(dx, dy);
+      const n = { x: dx / len, y: dy / len };            // zeigt von der gezogenen Ecke zur Originalecke
+      const M = { x: (1280 + Q.x) / 2, y: Q.y / 2 };      // Faltlinie = Mittelsenkrechte
+      const front = clipPoly(RECT, M, n, true);
+      const folded = clipPoly(RECT, M, n, false);
+      turn.style.clipPath = polyCss(front);
+      shadowWrap.style.clipPath = polyCss(folded);
+      const refl = folded.map(pt => {
+        const d = (pt[0] - M.x) * n.x + (pt[1] - M.y) * n.y;
+        return [pt[0] - 2 * d * n.x, pt[1] - 2 * d * n.y];
       });
-      cast.style.left = Math.max(0, xEdge) + "px";
-      cast.style.opacity = (0.95 * Math.sin(Math.PI * clamp(p, 0, 1)) * clamp(xEdge / 260, 0, 1)).toFixed(3);
+      flapClip.style.clipPath = polyCss(refl);
+      const mn = M.x * n.x + M.y * n.y;
+      flap.style.transform = `matrix(${1 - 2 * n.x * n.x},${-2 * n.x * n.y},${-2 * n.x * n.y},${1 - 2 * n.y * n.y},${2 * mn * n.x},${2 * mn * n.y})`;
+      const phi = Math.atan2(n.x, -n.y) * 180 / Math.PI;  // Richtung der Faltlinie
+      const tr = `translate(${M.x}px,${M.y}px) rotate(${phi}deg)`;
+      shadowRot.style.transform = hiRot.style.transform = tr;
+      shadowWrap.style.opacity = (clamp(p * 10, 0, 1) * (1 - clamp((p - 0.55) / 0.45, 0, 1))).toFixed(3);
+    },
+    cleanup() {
+      shadowWrap.remove(); flapOuter.remove();
+      turn.style.clipPath = ""; turn.style.zIndex = ""; under.style.zIndex = "";
     }
   };
 }
 
-function runCurl(model, p0, p1, after) {
-  const dur = 1200, t0 = performance.now();
-  const c = {
-    raf: 0,
-    done() { model.root.remove(); model.cast.remove(); after(); }
-  };
+function runPeel(turn, under, p0, p1, after) {
+  const model = buildPeel(turn, under);
+  const dur = 1400, t0 = performance.now();
+  const c = { raf: 0, done() { model.update(p1); model.cleanup(); after(); } };
   curl = c;
   model.update(p0);
   const step = now => {
@@ -518,15 +556,15 @@ function show(n, init) {
   if (init || reduced || from === idx) {
     els[idx].classList.add("active");
   } else if (idx > from) {
-    // vorwärts: die alte Folie wird als gebogene Seite nach links weggeblättert
-    const model = buildCurl(els[from]);
-    els[idx].classList.add("active");
-    runCurl(model, 0, 1, () => {});
+    // vorwärts: die aktuelle Folie wird von der oberen rechten Ecke aus nach links weggeblättert
+    const turn = els[from], under = els[idx];
+    turn.classList.add("active"); under.classList.add("active");
+    runPeel(turn, under, 0, 1, () => turn.classList.remove("active"));
   } else {
-    // zurück: die vorherige Folie wird als gebogene Seite wieder aufgelegt
-    const model = buildCurl(els[idx]);
-    els[from].classList.add("active");
-    runCurl(model, 1, 0, () => { els[idx].classList.add("active"); els[from].classList.remove("active"); });
+    // zurück: die vorherige Folie wird von links wieder zur rechten Ecke zurückgeblättert
+    const turn = els[idx], under = els[from];
+    turn.classList.add("active"); under.classList.add("active");
+    runPeel(turn, under, 1, 0, () => under.classList.remove("active"));
   }
   document.getElementById("counter").textContent = `${idx + 1} / ${els.length}`;
   document.getElementById("prev").disabled = idx === 0;
