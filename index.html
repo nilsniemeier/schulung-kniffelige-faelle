@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kniffelige Fälle aus der Praxis</title>
+<style>
+  :root {
+    --bg: #f6f4f0; --card: #ffffff; --text: #1d1d1f; --muted: #6a6a70;
+    --accent: #c0392b; --accent-soft: #fbeae8; --ok: #1e7a46; --ok-soft: #e4f4EA;
+    --warn: #9a6700; --warn-soft: #fff4d6; --border: #e2ded6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17171a; --card: #222226; --text: #f0eee9; --muted: #a2a2a8;
+      --accent: #ff7a6b; --accent-soft: #3a2220; --ok: #5fd08d; --ok-soft: #1c2e24;
+      --warn: #f0b84a; --warn-soft: #33290f; --border: #35353b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 18px/1.55 system-ui, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; padding: 10px 24px;
+    border-bottom: 1px solid var(--border); background: var(--card); font-size: 14px; color: var(--muted);
+  }
+  header strong { color: var(--text); }
+  header .spacer { flex: 1; }
+  #timer { font-variant-numeric: tabular-nums; }
+  #bar { height: 4px; background: var(--border); }
+  #bar div { height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+  main { flex: 1; overflow-y: auto; padding: 32px 24px; }
+  .slide { max-width: 880px; margin: 0 auto; display: none; }
+  .slide.active { display: block; animation: in .25s ease; }
+  @keyframes in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  h1 { font-size: 2.4rem; line-height: 1.15; margin: 0 0 .4em; }
+  h2 { font-size: 1.7rem; margin: 0 0 .3em; }
+  .tag {
+    display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-soft); padding: 3px 10px; border-radius: 99px; margin-bottom: 12px;
+  }
+  .lead { color: var(--muted); font-size: 1.15rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px; margin: 16px 0; }
+  .card h3 { margin: 0 0 6px; font-size: 1rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .card p, .card ul { margin: 0; }
+  .card ul { padding-left: 1.2em; }
+  .card li { margin: 4px 0; }
+  .question { background: var(--warn-soft); border-color: transparent; }
+  .question h3 { color: var(--warn); }
+  .solution { background: var(--ok-soft); border-color: transparent; display: none; }
+  .solution h3 { color: var(--ok); }
+  .solution.show { display: block; animation: in .25s ease; }
+  button.reveal {
+    font: inherit; font-weight: 600; cursor: pointer; border: 0; border-radius: 10px;
+    background: var(--accent); color: #fff; padding: 10px 18px;
+  }
+  button.reveal:hover { filter: brightness(1.08); }
+  .note { font-size: 14px; color: var(--muted); margin-top: 24px; }
+  .agenda { list-style: none; padding: 0; margin: 0; }
+  .agenda li { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .agenda .min { width: 64px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  footer {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 24px; border-top: 1px solid var(--border); background: var(--card); font-size: 14px; color: var(--muted);
+  }
+  footer button {
+    font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    border-radius: 8px; padding: 6px 14px;
+  }
+  footer button:disabled { opacity: .4; cursor: default; }
+  @media (max-width: 600px) { body { font-size: 16px; } h1 { font-size: 1.8rem; } main { padding: 20px 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <strong>Kniffelige Fälle aus der Praxis</strong>
+  <span class="spacer"></span>
+  <span>Laufzeit: <span id="timer">00:00</span></span>
+</header>
+<div id="bar"><div></div></div>
+<main id="stage"></main>
+<footer>
+  <button id="prev">← Zurück</button>
+  <span id="counter"></span>
+  <span>Tasten: ← → · Leertaste = Lösung</span>
+  <button id="next">Weiter →</button>
+</footer>
+
+<script>
+const cases = [
+  {
+    title: "Unterdruck durch Dunstabzugshaube",
+    min: 6,
+    scenario: "Familie Weber ruft an: Seit der neuen Küche mit leistungsstarker Ablufthaube (Luft geht ins Freie) riecht es manchmal nach Abgas, und der Kaminofen im Wohnzimmer „zieht zurück“. Die Wohnung wurde vor Kurzem komplett abgedichtet (neue Fenster).",
+    question: [
+      "Welche Gefahr besteht hier konkret?",
+      "Würde eine Umlufthaube etwas ändern?",
+      "Was prüfen Sie vor Ort?",
+      "Welche Lösungen kommen in Frage?"
+    ],
+    solution: [
+      "Raumluftabhängige Feuerstätte + Abluftanlage = Unterdruck → Abgase können in den Aufstellraum gesogen werden (CO-Gefahr).",
+      "Nein, sofern die Rückführung der Luft im gleichen Druckbereich liegt. Eine Umlufthaube führt die gefilterte Luft in den Raum zurück, aus dem sie angesaugt wurde, und entzieht ihm keine Luft. Sie erzeugt keinen Unterdruck und hat keinen Effekt auf den Betrieb der Feuerstätte. Relevant sind Geräte, die Luft aus dem Raum nach außen oder in einen anderen Druckbereich fördern (Abluft).",
+      "Messung des Unterdrucks im Betrieb (Haube auf höchster Stufe, Fenster/Türen geschlossen), Funktion von Zuluftöffnungen, Verbrennungsluftversorgung.",
+      "Raumluftunabhängiger Betrieb des Ofens, Fensterkontaktschalter bzw. Unterdruckwächter, kontrollierte Zuluft. Kunde über das Risiko schriftlich informieren und Maßnahme dokumentieren."
+    ]
+  },
+  {
+    title: "CO-Warnmelder schlägt Alarm",
+    min: 6,
+    scenario: "Sie sind gerade vor Ort, als im Flur der CO-Melder des Kunden auslöst. Im Keller steht ein älterer Gasdurchlauferhitzer, im Wohnzimmer ein Kaminofen. Die Bewohner klagen über Kopfschmerzen und Übelkeit.",
+    question: [
+      "Was ist Ihre erste Handlung – noch vor der Ursachenforschung?",
+      "Wie gehen Sie mit der Messung selbst um?",
+      "Wann ist ein Weiterbetrieb ausgeschlossen?"
+    ],
+    solution: [
+      "Eigenschutz und Menschenrettung: Personen ins Freie bringen, lüften, bei Symptomen Notruf 112. Erst danach Ursache suchen.",
+      "Mit dem eigenen Messgerät Raumluft-CO erfassen, verdächtige Feuerstätten ausschalten. Nicht in ungelüftete Bereiche mit hoher CO-Konzentration gehen.",
+      "Bei akuter Gefahr: Feuerstätte außer Betrieb nehmen, den Kunden eindeutig informieren und die zuständige Stelle nach den Vorgaben Ihrer Behörde benachrichtigen. Wiederinbetriebnahme nur nach Mängelbeseitigung."
+    ]
+  },
+  {
+    title: "Mehrfachbelegung: Gastherme und Kaminofen",
+    min: 6,
+    scenario: "In einem Mehrfamilienhaus haben zwei Parteien nachträglich eigene Feuerstätten an denselben Schornstein angeschlossen: im Erdgeschoss eine Gastherme (raumluftabhängig), im ersten Stock ein Kaminofen. Eine Anzeige oder Abnahme gab es nicht.",
+    question: [
+      "Ist diese Gemischtbelegung (Gas und Holz) zulässig?",
+      "Was ist das Kernproblem?",
+      "Wie gehen Sie mit dem Bestand um?"
+    ],
+    solution: [
+      "Grundsätzlich nein. Ausnahmen sind nur zulässig, wenn die Abgasanlage nachweislich für beide Feuerstätten geeignet ist (Bemessung, Eignung für feste Brennstoffe, keine Rückströmung oder Abgasübertragung) und ein gefahrloser Betrieb in jedem Betriebszustand sichergestellt ist. Ohne Nachweis ist es ein Mangel.",
+      "Feste und gasförmige Brennstoffe stellen unterschiedliche Anforderungen an die Abgasanlage (Abgastemperatur, Feuchte, Ruß- und Teerablagerungen, Druckverhältnisse). Gleichzeitiger Betrieb kann zu Rückströmung, Rußeintrag in die Gasfeuerstätte und CO-Gefahr führen. Liegen die Feuerstätten in unterschiedlichen Räumen, kann zusätzlich über den Anschluss der Gasfeuerstätte eine Brandübertragung erfolgen.",
+      "Das ist ein Mangel: Mängelmitteilung mit Frist, Kunde und Eigentümer über die Gefahr informieren, bis zur Behebung eine der beiden Feuerstätten stilllegen. Lösung z. B. eigene Abgasanlage für den Kaminofen oder Umstellung. Dokumentieren und bei Nichtbeachtung die zuständige Behörde einschalten."
+    ]
+  },
+  {
+    title: "Versottung nach Umstellung auf Gas",
+    min: 6,
+    scenario: "Ein Eigentümer hat seinen Ölkessel auf Gas umgerüstet: Der Ölbrenner wurde durch einen Gasbrenner ersetzt, der Kessel blieb. Der gemauerte Schornstein war mit Öl jahrelang trocken und wurde nicht angefasst. Nach dem ersten Winter hat der Eigentümer braune Flecken an der Schornsteinwand im Dachgeschoss.",
+    question: [
+      "Was ist passiert?",
+      "Mehr Wasserdampf bei Gas als bei Öl – was bedeutet das für den Taupunkt?",
+      "Wie bewerten Sie die Abgasanlage?",
+      "Was empfehlen Sie dem Kunden?"
+    ],
+    solution: [
+      "Das Abgas kühlt im Schornstein bis unter den Taupunkt ab, der Wasserdampf kondensiert an der Wand. Das Kondensat durchfeuchtet das Mauerwerk: Versottung bzw. Feuchteschaden.",
+      "Ja. Erdgas enthält mehr Wasserstoff als Heizöl EL, daher entsteht bei der Verbrennung mehr Wasserdampf. Der Wasserdampfanteil im Abgas steigt, und damit der Taupunkt: etwa 56 bis 59 °C bei Erdgas gegenüber etwa 47 bis 49 °C bei Heizöl EL (je nach Quelle). Ein Schornstein, der mit Öl noch trocken blieb, kann bei Gas unter den Taupunkt fallen, vor allem bei niedrigen Abgastemperaturen.",
+      "Die Abgasanlage ist nicht feuchteunempfindlich und deshalb ohne geeignete Auskleidung nicht zulässig, wenn die Wandtemperatur unter den Taupunkt fällt. Zudem Querschnitt und Abgastemperatur für die neue Leistung neu berechnen.",
+      "Sanierung mit feuchteunempfindlicher Innenrohrleitung (z. B. Edelstahl- oder Kunststoffrohr, je nach Zulassung), Hersteller- und Bauartzulassung beachten, dann Abnahme. Ein Beratungsprotokoll ist sinnvoll."
+    ]
+  },
+  {
+    title: "Was brennt da eigentlich?",
+    min: 6,
+    scenario: "Bei der Feuerstättenschau liegt neben dem Kaminofen ein Stapel Paletten, lackierte Bretter und Spanplattenreste. Der Kunde sagt: „Das Holz kostet mich ja nichts.“ Im Garten liegt außerdem frisch geschlagenes Fichtenholz.",
+    question: [
+      "Was ist erlaubt, was nicht?",
+      "Welche Auswirkungen hat feuchtes Holz?",
+      "Wie sprechen Sie den Kunden an?"
+    ],
+    solution: [
+      "Zulässig sind nur Brennstoffe nach 1. BImSchV, u. a. naturbelassenes stückiges Holz. Lackiertes, beschichtetes oder verleimtes Holz und Abfälle gehören nicht in die Feuerung.",
+      "Naturbelassenes Scheitholz darf nur bei einem Feuchtegehalt von höchstens 25 % verbrannt werden. Feuchtes Holz → mehr Staub, mehr Teer, Rußablagerungen, Schornsteinbrandgefahr.",
+      "Sachlich bleiben, Gesundheits- und Brandrisiko erklären, Holzfeuchte ggf. mit Messgerät zeigen und Lagerung (2 Jahre, trocken, luftig) empfehlen."
+    ]
+  },
+  {
+    title: "Fristen aus dem Feuerstättenbescheid laufen ab",
+    min: 6,
+    scenario: "Sie sind als frei beauftragter Schornsteinfegerbetrieb tätig (nicht hoheitlich). Der Feuerstättenbescheid eines Kunden sieht Kehr- und Überprüfungsarbeiten sowie eine Messung bis zum 31.03. vor. Der Kunde hat Sie im Herbst mündlich beauftragt, den Termin aber dreimal verschoben. Nun sind es noch zwei Wochen bis zum Fristende, und er reagiert nicht mehr auf Anrufe.",
+    question: [
+      "Wer ist dafür verantwortlich, dass die Arbeiten fristgerecht erledigt werden?",
+      "Was passiert, wenn die Frist ohne Nachweis verstreicht?",
+      "Was können und sollten Sie als beauftragter Betrieb jetzt tun?"
+    ],
+    solution: [
+      "Der Eigentümer. Er darf den Betrieb frei wählen, muss aber dafür sorgen, dass die Arbeiten innerhalb der Fristen durchgeführt werden und die Bescheinigung beim bevollmächtigten Schornsteinfegermeister ankommt. Das Verschieben des Termins entlastet ihn nicht.",
+      "Liegt nach Fristende kein Nachweis vor, setzt der bevollmächtigte Schornsteinfegermeister eine Nachfrist. Bleibt auch diese ungenutzt, folgt die Meldung an die zuständige Behörde, die Maßnahmen bis hin zu einem Bußgeld einleiten kann. Die hoheitliche Nachschau liegt dann beim bevollmächtigten Schornsteinfegermeister.",
+      "Schriftlich und nachweisbar an die Frist erinnern (Datum, konkrete Terminvorschläge, Hinweis auf die Folgen). Termin wenn möglich vor Fristende anbieten. Nach der Ausführung die Bescheinigung zeitnah erstellen und an den Eigentümer bzw. nach Absprache an den bevollmächtigten Schornsteinfegermeister übermitteln. Alle Kontaktversuche dokumentieren – das schützt Sie vor dem Vorwurf, nicht erreichbar gewesen zu sein."
+    ]
+  },
+  {
+    title: "Eigentümer beauftragt, Mieter verweigert",
+    min: 5,
+    scenario: "Eine Hausverwaltung hat Sie für die Messung und Überprüfung der Gasetagenheizung in einer Mietwohnung beauftragt. Beim vereinbarten Termin öffnet der Mieter nicht die Tür. Im Telefonat sagt er, er lasse „keinen Fremden“ in die Wohnung, das gehe ihn nichts an. Das Fristende im Feuerstättenbescheid ist in drei Wochen.",
+    question: [
+      "Dürfen Sie sich auf den Auftrag des Eigentümers hin Zutritt verschaffen?",
+      "Darf sich der Eigentümer Zutritt verschaffen?",
+      "Wer muss den Zugang beim Mieter durchsetzen?",
+      "Wie schützen Sie sich und den Eigentümer vor den Folgen des Fristablaufs?"
+    ],
+    solution: [
+      "Nein. Der Auftrag des Eigentümers ersetzt nicht die Zustimmung des Mieters. Die Wohnung ist durch das Hausrecht geschützt, ein eigenmächtiges Betreten ist ausgeschlossen.",
+      "Nein. Art. 13 Grundgesetz schützt die Unverletzlichkeit der Wohnung, und das gilt auch gegenüber dem Vermieter: Die Mietwohnung ist die Wohnung des Mieters, nicht des Eigentümers. Eigenmächtiges Betreten, Schlüsselgewalt oder Türöffnen ohne Einwilligung ist unzulässig und kann als Hausfriedensbruch (§ 123 StGB) strafbar sein. Der Vermieter hat zwar bei berechtigtem Interesse und nach rechtzeitiger Ankündigung einen Anspruch auf Zutritt, darf ihn aber nicht selbst erzwingen (Verbot der Selbsthilfe). Durchsetzbar ist er nur gerichtlich. Ausnahme: akute Gefahr, etwa bei Gasgeruch oder Brand – dort sind Feuerwehr bzw. Rettungsdienst zu rufen, die nach Gefahrenabwehrrecht handeln. Behördliche Betretungsrechte (Art. 13 Abs. 7 GG) stehen nicht dem privaten Eigentümer zu.",
+      "Der Eigentümer bzw. die Hausverwaltung. In der Regel muss der Mieter solche gesetzlich vorgeschriebenen Arbeiten dulden, wenn sie rechtzeitig angekündigt werden. Der Eigentümer kündigt schriftlich einen neuen Termin mit angemessener Vorlaufzeit an, nennt den Zweck und bietet Ausweichtermine an. Hilft das nicht, bleibt die rechtliche Durchsetzung (z. B. Duldungsklage) beim Eigentümer.",
+      "Eigentümer schriftlich über die Verweigerung informieren, die Fristen nennen und den bevollmächtigten Schornsteinfegermeister frühzeitig einbinden, solange noch Zeit ist. So wird deutlich, dass der Eigentümer sich bemüht hat. Alle Versuche und Antworten dokumentieren, auch vergebliche Anfahrten, denn sie können als Kosten gegenüber dem Auftraggeber relevant sein."
+    ]
+  },
+  {
+    title: "Kaminofen ohne Typenschild",
+    min: 6,
+    scenario: "Ein Kunde hat einen Kaminofen aus dem Nachlass seines Onkels übernommen und möchte ihn anschließen. Typenschild fehlt, Papiere gibt es nicht. „Der lief 30 Jahre problemlos“, sagt er.",
+    question: [
+      "Darf der Ofen so betrieben werden?",
+      "Wie können Sie den Betrieb ggf. doch möglich machen?",
+      "Welche Optionen gibt es, wenn das nicht klappt?"
+    ],
+    solution: [
+      "Ohne Nachweis der Einhaltung der Grenzwerte (Typenschild, Prüfbescheinigung) ist der Betrieb nicht zulässig. Typenschild und Bedienungsanleitung in deutscher Sprache sind zwingend vorgeschrieben. Fehlen sie oder liegen sie nur in einer anderen Sprache vor, ist der Ofen nicht betriebsbereit.",
+      "Hersteller ermitteln und Nachweis (Prüfstandsmessung, Herstellerbescheinigung) anfordern. Eine Messung vor Ort ist bei Einzelraumfeuerungen als Nachweis nicht zulässig, denn die Grenzwerte werden auf dem Prüfstand ermittelt. Ältere Anlagen mussten bis zu den gesetzlichen Fristen nachgerüstet oder stillgelegt werden.",
+      "Ohne Nachweis hilft auch eine Nachrüstung mit Staubabscheider nicht, denn die Einhaltung der Grenzwerte lässt sich für das Gerät dann ebenfalls nicht belegen. Es bleibt nur der Austausch gegen ein geprüftes Gerät mit deutschem Typenschild und deutscher Bedienungsanleitung. Bis dahin darf der Ofen nicht betrieben werden. Bei Neuanschluss zusätzlich Eignung der Abgasanlage und Verbrennungsluftversorgung prüfen."
+    ]
+  },
+  {
+    title: "Nachbar beschwert sich über Rauch",
+    min: 6,
+    scenario: "Ein Nachbar meldet sich, weil der Rauch der neuen Pelletheizung nebenan regelmäßig in sein Schlafzimmerfenster zieht. Der Schornstein endet knapp über der Dachfläche, das Nachbarhaus ist höher gebaut.",
+    question: [
+      "Welche Vorgaben zur Ableitung der Abgase sind relevant?",
+      "Wie berechnen bzw. bestimmen Sie die erforderliche Mündungshöhe?",
+      "Was ist, wenn alles formal in Ordnung ist?"
+    ],
+    solution: [
+      "§ 19 der 1. BImSchV. Neue Anlagen für feste Brennstoffe: firstnahe Mündung, den First um mindestens 40 cm überragend; bei Dachneigung unter 20° wird auf einen fiktiven First mit 20° Neigung bezogen. Zusätzlich muss die Mündung die Oberkanten von Fenstern, Türen und Lüftungsöffnungen im Umkreis überragen: bis 50 kW im Umkreis von 15 m um 1 m, bis 100 kW im Umkreis von 17 m um 2 m, bis 200 kW im Umkreis von 19 bis 21 m um 3 m. Für Altanlagen gelten abgeschwächte Regeln. Landesbauordnung und örtliche Vorgaben ergänzen.",
+      "Wenn die Standardanforderungen nicht genügen oder eine Abweichung gewünscht ist, wird die Mündungshöhe nach VDI 3781 Blatt 4 (Ausgabe Juli 2017, „Ableitbedingungen für Abgase – Kleinfeuerungsanlagen“) für das Einzelgebäude bestimmt. Die Richtlinie berücksichtigt u. a. vorgelagerte Bebauung und Hanglage und prüft ungestörten Abtransport und ausreichende Verdünnung der Abgase. Erforderlich sind u. a. Wärmeleistung, Gebäude- und Dachgeometrie, Lage der Nachbargebäude und Öffnungen. Der Text ist kostenpflichtig, Rechenverfahren und Beispiele stehen in der Richtlinie selbst.",
+      "Wenn formal alles passt: Gespräch mit beiden Seiten, ggf. Erhöhung der Mündung anregen. Verbindlich entscheidet im Streit die Behörde – nicht der Schornsteinfeger."
+    ]
+  }
+];
+
+const slides = [];
+
+slides.push(`
+  <section class="slide">
+    <span class="tag">Schulung · ca. 60 Minuten</span>
+    <h1>Kniffelige Fälle aus der Praxis</h1>
+    <p class="lead">Neun realistische Situationen aus dem Alltag von Schornsteinfegerinnen und Schornsteinfegern. Erst gemeinsam überlegen, dann die Lösung aufdecken.</p>
+    <div class="card">
+      <h3>So läuft es ab</h3>
+      <ul>
+        <li>Fall lesen und die Fragen in der Gruppe diskutieren (ca. 3 Minuten)</li>
+        <li>Mit der <strong>Leertaste</strong> oder dem Button die Lösung zeigen</li>
+        <li>Ergänzungen aus der eigenen Erfahrung sind ausdrücklich erwünscht</li>
+      </ul>
+    </div>
+    <p class="note">Hinweis: Die Lösungen sind Diskussionsgrundlagen. Maßgeblich sind immer der aktuelle Rechtsstand, Landesrecht und die Vorgaben der zuständigen Behörde.</p>
+  </section>`);
+
+slides.push(`
+  <section class="slide">
+    <span class="tag">Überblick</span>
+    <h2>Agenda</h2>
+    <div class="card">
+      <ul class="agenda">
+        <li><span class="min">5 min</span><span>Einstieg und Ablauf</span></li>
+        ${cases.map((c, i) => `<li><span class="min">${c.min} min</span><span>Fall ${i + 1}: ${c.title}</span></li>`).join("")}
+        <li><span class="min">7 min</span><span>Zusammenfassung und Austausch</span></li>
+      </ul>
+    </div>
+  </section>`);
+
+cases.forEach((c, i) => {
+  const list = arr => `<ul>${arr.map(x => `<li>${x}</li>`).join("")}</ul>`;
+  slides.push(`
+  <section class="slide case">
+    <span class="tag">Fall ${i + 1} von ${cases.length}</span>
+    <h2>${c.title}</h2>
+    <div class="card"><h3>Situation</h3><p>${c.scenario}</p></div>
+    <div class="card question"><h3>Zur Diskussion</h3>${list(c.question)}</div>
+    <p><button class="reveal">Lösung zeigen</button></p>
+    <div class="card solution"><h3>Lösungsansatz</h3>${list(c.solution)}</div>
+  </section>`);
+});
+
+slides.push(`
+  <section class="slide">
+    <span class="tag">Skizze zu Fall 9</span>
+    <h2>Ableitbedingungen: Abstände der Mündung</h2>
+    <div class="card" style="padding:12px">
+      <svg viewBox="0 0 640 330" role="img" aria-label="Seitenansicht: Eigenes Haus mit Schornstein, Umkreis um die Mündung und höheres Nachbarhaus mit Fenster im Umkreis" style="width:100%;height:auto;display:block">
+        <style>
+          .t { font: 13px system-ui, sans-serif; fill: var(--text); }
+          .s { font: 12px system-ui, sans-serif; fill: var(--muted); }
+          .b { font-weight: 700; }
+          .house { fill: var(--bg); stroke: var(--text); stroke-width: 2; }
+          .win { fill: var(--card); stroke: var(--text); stroke-width: 2; }
+        </style>
+        <!-- Boden -->
+        <line x1="10" y1="300" x2="630" y2="300" stroke="var(--text)" stroke-width="2"/>
+        <!-- Umkreis um die Mündung -->
+        <circle cx="148" cy="165" r="210" fill="var(--accent-soft)" fill-opacity=".5" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 5"/>
+        <!-- Eigenes Haus -->
+        <polygon class="house" points="40,300 40,225 135,185 230,225 230,300"/>
+        <!-- Schornstein -->
+        <rect x="140" y="165" width="16" height="30" class="house"/>
+        <!-- Nachbarhaus -->
+        <polygon class="house" points="300,300 300,150 430,110 560,150 560,300"/>
+        <rect class="win" x="315" y="178" width="30" height="40"/>
+        <rect class="win" x="470" y="215" width="30" height="40"/>
+        <!-- Ebene der Mündung und zulässige Fensteroberkante -->
+        <line x1="148" y1="165" x2="600" y2="165" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <line x1="290" y1="179" x2="600" y2="179" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <!-- Mündung -->
+        <circle cx="148" cy="165" r="4" fill="var(--accent)"/>
+        <!-- Maß 1 m -->
+        <line x1="596" y1="165" x2="596" y2="179" stroke="var(--text)" stroke-width="1.5"/>
+        <text class="s" x="604" y="176">1 m</text>
+        <!-- Radius -->
+        <line x1="148" y1="280" x2="358" y2="280" stroke="var(--accent)" stroke-width="1.5"/>
+        <line x1="148" y1="274" x2="148" y2="286" stroke="var(--accent)" stroke-width="1.5"/>
+        <line x1="358" y1="274" x2="358" y2="286" stroke="var(--accent)" stroke-width="1.5"/>
+        <text class="t b" x="253" y="274" text-anchor="middle" style="fill:var(--accent)">Umkreis 15 m (bis 50 kW)</text>
+        <!-- First-Überstand -->
+        <line x1="135" y1="185" x2="135" y2="165" stroke="var(--text)" stroke-width="1" stroke-dasharray="2 2"/>
+        <text class="s" x="40" y="160">≥ 40 cm über First</text>
+        <text class="s" x="40" y="174">(Maß übertrieben dargestellt)</text>
+        <!-- Beschriftungen -->
+        <text class="t b" x="135" y="317" text-anchor="middle">Eigenes Haus (Pelletheizung)</text>
+        <text class="t b" x="430" y="317" text-anchor="middle">Nachbarhaus</text>
+        <text class="s" x="360" y="160" style="fill:var(--ok)">Ebene der Mündung</text>
+        <text class="s" x="352" y="196" style="fill:var(--warn)">Fensteroberkante: max. bis hier</text>
+        <text class="t b" x="330" y="238" style="fill:var(--accent)">✗ zu hoch</text>
+        <text class="t b" x="485" y="272" style="fill:var(--ok)">✓ außerhalb</text>
+      </svg>
+    </div>
+    <div class="card">
+      <h3>So lesen Sie die Skizze</h3>
+      <ul>
+        <li><strong>Mündung:</strong> firstnah, mindestens 40 cm über dem First (bei Dachneigung unter 20° Bezug auf fiktiven First mit 20°).</li>
+        <li><strong>Umkreis:</strong> Bis 50 kW 15 m / 1 m, bis 100 kW 17 m / 2 m, bis 200 kW 19 bis 21 m / 3 m.</li>
+        <li><strong>Prüfung:</strong> Jedes Fenster, jede Tür und Lüftungsöffnung im Umkreis muss mit der Oberkante mindestens das geforderte Maß unter der Mündung liegen. Das obere Fenster im Nachbarhaus erfüllt das nicht – hier ist eine Berechnung nach VDI 3781 Blatt 4 oder eine höhere Mündung nötig.</li>
+      </ul>
+    </div>
+    <p class="note">Schematische Darstellung, nicht maßstäblich. Quelle: <a href="https://www.gesetze-im-internet.de/bimschv_1_2010/__19.html" target="_blank" rel="noopener">§ 19 Abs. 1 der 1. BImSchV</a> (Neuanlagen für feste Brennstoffe, errichtet nach dem 31.12.2021). Das Prüf-Tool folgt auf der nächsten Folie.</p>
+  </section>`);
+
+slides.push(`
+  <section class="slide" style="max-width:960px">
+    <span class="tag">Werkzeug zu Fall 9</span>
+    <h2>Prüf-Tool: Mündungshöhe nach § 19 1. BImSchV</h2>
+    <iframe src="muendungshoehe.html" title="Prüf-Tool Mündungshöhe" style="width:100%;height:calc(100vh - 230px);min-height:480px;border:1px solid var(--border);border-radius:12px;background:var(--bg)"></iframe>
+    <p class="note"><a href="muendungshoehe.html" target="_blank">In eigenem Tab öffnen →</a> · Pfeiltasten wechseln die Folie erst, wenn der Fokus außerhalb des Tools liegt.</p>
+  </section>`);
+
+slides.push(`
+  <section class="slide">
+    <span class="tag">Fazit</span>
+    <h2>Was wir mitnehmen</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Sicherheit zuerst:</strong> Bei CO-Verdacht gehen Menschenrettung und Eigenschutz vor jeder Analyse.</li>
+        <li><strong>Zusammenspiel prüfen:</strong> Feuerstätte, Abgasanlage, Verbrennungsluft und Abluftgeräte nie isoliert betrachten.</li>
+        <li><strong>Nachweise einfordern:</strong> Ohne Typenschild, Berechnung oder Zulassung keine Freigabe.</li>
+        <li><strong>Sauber dokumentieren:</strong> Fristen, Gespräche und Mängel nachvollziehbar festhalten.</li>
+        <li><strong>Grenzen kennen:</strong> Zwangsmaßnahmen und Streitentscheidungen liegen bei der Behörde.</li>
+      </ul>
+    </div>
+    <div class="card question"><h3>Offene Runde</h3><p>Welchen kniffeligen Fall haben Sie selbst erlebt? Was würden Sie heute anders machen?</p></div>
+  </section>`);
+
+const stage = document.getElementById("stage");
+stage.innerHTML = slides.join("");
+const els = [...stage.querySelectorAll(".slide")];
+let idx = 0;
+try { const s = parseInt(localStorage.getItem("schulung-idx"), 10); if (s >= 0 && s < els.length) idx = s; } catch (e) {}
+
+function show(n) {
+  idx = Math.max(0, Math.min(els.length - 1, n));
+  els.forEach((el, i) => el.classList.toggle("active", i === idx));
+  document.getElementById("counter").textContent = `${idx + 1} / ${els.length}`;
+  document.querySelector("#bar div").style.width = ((idx + 1) / els.length * 100) + "%";
+  document.getElementById("prev").disabled = idx === 0;
+  document.getElementById("next").disabled = idx === els.length - 1;
+  document.getElementById("stage").scrollTop = 0;
+  try { localStorage.setItem("schulung-idx", idx); } catch (e) {}
+}
+
+function toggleSolution() {
+  const sol = els[idx].querySelector(".solution");
+  if (!sol) return;
+  const on = sol.classList.toggle("show");
+  els[idx].querySelector(".reveal").textContent = on ? "Lösung verbergen" : "Lösung zeigen";
+}
+
+els.forEach(el => {
+  const b = el.querySelector(".reveal");
+  if (b) b.addEventListener("click", toggleSolution);
+});
+document.getElementById("prev").onclick = () => show(idx - 1);
+document.getElementById("next").onclick = () => show(idx + 1);
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight" || e.key === "PageDown") show(idx + 1);
+  else if (e.key === "ArrowLeft" || e.key === "PageUp") show(idx - 1);
+  else if (e.key === " " && els[idx].querySelector(".solution")) { e.preventDefault(); toggleSolution(); }
+});
+
+const t0 = Date.now();
+setInterval(() => {
+  const s = Math.floor((Date.now() - t0) / 1000);
+  document.getElementById("timer").textContent =
+    String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}, 1000);
+
+show(idx);
+</script>
+</body>
+</html>

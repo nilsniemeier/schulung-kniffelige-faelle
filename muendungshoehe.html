@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mündungshöhe prüfen (§ 19 1. BImSchV)</title>
+<style>
+  :root {
+    --bg: #f6f4f0; --card: #ffffff; --text: #1d1d1f; --muted: #6a6a70; --border: #e2ded6;
+    --accent: #c0392b; --accent-soft: #fbeae8; --ok: #1e7a46; --ok-soft: #e4f4ea; --warn: #9a6700; --warn-soft: #fff4d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17171a; --card: #222226; --text: #f0eee9; --muted: #a2a2a8; --border: #35353b;
+      --accent: #ff7a6b; --accent-soft: #3a2220; --ok: #5fd08d; --ok-soft: #1c2e24; --warn: #f0b84a; --warn-soft: #33290f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.5 system-ui, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.9rem; margin: 0 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 18px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 14px 0; }
+  .card h2 { font-size: .95rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px 16px; }
+  label { display: block; font-size: 14px; color: var(--muted); }
+  input { width: 100%; margin-top: 3px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; }
+  .win { display: grid; grid-template-columns: 1.4fr 1fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 8px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); padding: 7px 12px; }
+  button.primary { background: var(--accent); color: #fff; border: 0; font-weight: 600; padding: 10px 18px; }
+  .res { border-radius: 10px; padding: 10px 14px; margin: 8px 0; }
+  .res.ok { background: var(--ok-soft); } .res.bad { background: var(--accent-soft); } .res.info { background: var(--warn-soft); }
+  .res strong { display: block; }
+  .big { font-size: 1.25rem; font-weight: 700; }
+  .note { font-size: 14px; color: var(--muted); }
+  a { color: var(--accent); }
+  @media (max-width: 560px) { .win { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Mündungshöhe prüfen</h1>
+  <p class="lead">Prüfung der Ableitbedingungen nach § 19 Abs. 1 der 1. BImSchV für <strong>neue Anlagen für feste Brennstoffe bis 200 kW</strong> (Standardfall, Satteldach). Dies ist <em>keine</em> Berechnung nach VDI 3781 Blatt 4.</p>
+
+  <div class="card">
+    <h2>Anlage und Dach</h2>
+    <div class="grid">
+      <label>Gesamtwärmeleistung (kW)<input id="kw" type="number" step="any" min="0" value="30"></label>
+      <label>Dachneigung (°)<input id="neig" type="number" step="any" min="0" max="90" value="15"></label>
+      <label>Firsthöhe über Gelände (m)<input id="first" type="number" step="any" value="9"></label>
+      <label>Horizontaler Abstand Traufe–First (m)<input id="a" type="number" step="any" min="0" value="5"></label>
+      <label>Mündungshöhe über Gelände (m)<input id="mund" type="number" step="any" value="9.4"></label>
+      <label>Horizontaler Abstand Mündung–First (m)<input id="hx" type="number" step="any" min="0" value="0.5"></label>
+      <label>Horizontaler Abstand Mündung–Traufe (m)<input id="ht" type="number" step="any" min="0" value="4.5"></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Fenster, Türen, Lüftungsöffnungen (Oberkante)</h2>
+    <div id="wins"></div>
+    <button id="add" type="button">+ Öffnung hinzufügen</button>
+    <p class="note">Abstand = horizontaler Abstand zwischen Mündung und Öffnung. Höhe = Oberkante der Öffnung über Gelände (gleiche Bezugshöhe wie die Mündung).</p>
+  </div>
+
+  <p><button class="primary" id="calc" type="button">Prüfen</button></p>
+  <div id="out"></div>
+
+  <p class="note"><strong>Quelle:</strong> <a href="https://www.gesetze-im-internet.de/bimschv_1_2010/__19.html" target="_blank" rel="noopener">§ 19 Abs. 1 der 1. BImSchV</a> (Neuanlagen für feste Brennstoffe, errichtet nach dem 31.12.2021): Mündung firstnah und mindestens 40 cm über First, bei Dachneigung unter 20° Bezug auf fiktiven First mit 20° Neigung; Umkreis und Überhöhung gegenüber Lüftungsöffnungen, Fenstern und Türen: bis 50 kW 15 m / 1 m, über 50 bis 100 kW 17 m / 2 m, über 100 bis 150 kW 19 m / 3 m, über 150 bis 200 kW 21 m / 3 m, darüber nach Tabelle 3 der VDI 3781 Blatt 4. Die Berechnung der Traufhöhe und des fiktiven Firsts im Tool sowie die Messung des Umkreises als Horizontalabstand sind Annahmen des Tools und stehen nicht so im Verordnungstext.</p>
+
+  <p class="note">Nicht abgedeckt: Anlagen über 200 kW (Tabelle 3 der VDI 3781 Blatt 4), Bestandsanlagen mit abgeschwächten Regeln nach § 19 Abs. 2, Pult- und Flachdächer mit Sonderlagen, Hanglage und vorgelagerte Bebauung. Die Prüfung ersetzt nicht die Entscheidung der zuständigen Stelle und nicht die Bestimmung nach VDI 3781 Blatt 4 im Einzelfall. Rechtsstand vor Verwendung gegen die aktuelle 1. BImSchV prüfen.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const num = id => parseFloat(String($(id).value).replace(",", "."));
+const fmt = x => x.toFixed(2).replace(".", ",") + " m";
+
+function addWin(name = "", d = "", h = "") {
+  const row = document.createElement("div");
+  row.className = "win";
+  row.innerHTML = `
+    <label>Bezeichnung<input class="w-name" type="text" value="${name}"></label>
+    <label>Abstand (m)<input class="w-d" type="number" step="any" min="0" value="${d}"></label>
+    <label>Oberkante (m)<input class="w-h" type="number" step="any" value="${h}"></label>
+    <button type="button" aria-label="Entfernen">✕</button>`;
+  row.querySelector("button").onclick = () => row.remove();
+  $("wins").appendChild(row);
+}
+$("add").onclick = () => addWin();
+addWin("Nachbarfenster OG", 10, 8.5);
+addWin("Nachbarfenster EG", 14, 5);
+
+function umkreis(kw) {
+  if (kw <= 50) return { r: 15, u: 1 };
+  if (kw <= 100) return { r: 17, u: 2 };
+  if (kw <= 150) return { r: 19, u: 3 };
+  if (kw <= 200) return { r: 21, u: 3 };
+  return null;
+}
+
+function res(cls, title, text) {
+  return `<div class="res ${cls}"><strong>${title}</strong>${text}</div>`;
+}
+
+$("calc").onclick = () => {
+  const kw = num("kw"), neig = num("neig"), first = num("first"), a = num("a");
+  const mund = num("mund"), hx = num("hx"), ht = num("ht");
+  if ([kw, neig, first, a, mund, hx, ht].some(isNaN)) {
+    $("out").innerHTML = res("info", "Eingaben unvollständig", "Bitte alle Felder zur Anlage und zum Dach ausfüllen.");
+    return;
+  }
+  const out = [];
+  const eps = 1e-9;
+  let required = -Infinity;
+
+  // Bezugsfirst (fiktiver First bei Dachneigung < 20°)
+  let bezug = first, hinweis = "Tatsächlicher First.";
+  if (neig < 20) {
+    const traufe = first - a * Math.tan(neig * Math.PI / 180);
+    bezug = traufe + a * Math.tan(20 * Math.PI / 180);
+    hinweis = `Dachneigung unter 20°: fiktiver First mit 20° Neigung = ${fmt(bezug)} (tatsächlicher First ${fmt(first)}).`;
+  }
+  const reqFirst = bezug + 0.4;
+  required = reqFirst;
+  out.push(res(mund + eps >= reqFirst ? "ok" : "bad",
+    (mund + eps >= reqFirst ? "✓ " : "✗ ") + "First: Mündung mindestens 40 cm über dem Bezugsfirst",
+    `${hinweis} Erforderlich ≥ ${fmt(reqFirst)}, vorhanden ${fmt(mund)}.`));
+
+  // Firstnähe
+  const nah1 = hx < ht, nah2 = (mund - bezug) > hx;
+  out.push(res(nah1 && nah2 ? "ok" : "bad",
+    (nah1 && nah2 ? "✓ " : "✗ ") + "Firstnahe Anordnung",
+    `Horizontalabstand zum First (${fmt(hx)}) ${nah1 ? "<" : "≥"} Abstand zur Traufe (${fmt(ht)}); ` +
+    `Höhe der Mündung über dem Bezugsfirst (${fmt(mund - bezug)}) ${nah2 ? ">" : "≤"} Horizontalabstand zum First (${fmt(hx)}).`));
+
+  // Öffnungen
+  const u = umkreis(kw);
+  if (!u) {
+    out.push(res("info", "Über 200 kW", "Für Öffnungen gilt Tabelle 3 der VDI 3781 Blatt 4. Dieses Tool kann das nicht prüfen."));
+  } else {
+    out.push(res("info", `Umkreis ${u.r} m, Überhöhung ${u.u} m`, `Für ${kw} kW Gesamtwärmeleistung: Die Mündung muss die Oberkante jeder Öffnung im Umkreis um mindestens ${u.u} m überragen.`));
+    let any = false;
+    document.querySelectorAll("#wins .win").forEach(row => {
+      const name = row.querySelector(".w-name").value || "Öffnung";
+      const d = parseFloat(row.querySelector(".w-d").value);
+      const h = parseFloat(row.querySelector(".w-h").value);
+      if (isNaN(d) || isNaN(h)) return;
+      any = true;
+      if (d > u.r) {
+        out.push(res("ok", `✓ ${name}`, `Außerhalb des Umkreises (${fmt(d)} > ${u.r} m), keine Anforderung.`));
+        return;
+      }
+      const req = h + u.u;
+      required = Math.max(required, req);
+      const ok = mund + eps >= req;
+      out.push(res(ok ? "ok" : "bad", `${ok ? "✓" : "✗"} ${name}`,
+        `Im Umkreis (${fmt(d)} ≤ ${u.r} m). Erforderlich ≥ ${fmt(req)} (Oberkante ${fmt(h)} + ${u.u} m), vorhanden ${fmt(mund)}.`));
+    });
+    if (!any) out.push(res("info", "Keine Öffnungen eingetragen", "Es wurden nur die Anforderungen am First geprüft."));
+  }
+
+  const alle = mund + eps >= required && nah1 && nah2;
+  const head = `<div class="res ${alle ? "ok" : "bad"}"><span class="big">${alle ? "Standardanforderungen erfüllt" : "Standardanforderungen nicht erfüllt"}</span>` +
+    `Erforderliche Mündungshöhe nach den geprüften Punkten: <strong>≥ ${fmt(required)}</strong> (vorhanden ${fmt(mund)}).` +
+    (alle ? "" : " Mündung erhöhen oder die Höhe nach VDI 3781 Blatt 4 für das Einzelgebäude bestimmen.") + `</div>`;
+  $("out").innerHTML = head + out.join("");
+};
+</script>
+</body>
+</html>
