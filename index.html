@@ -6,49 +6,25 @@
 <title>Kniffelige Fälle aus der Praxis</title>
 <style>
   :root {
-    --bg: #f6f4f0; --card: #ffffff; --text: #1d1d1f; --muted: #6a6a70;
-    --accent: #c0392b; --accent-soft: #fbeae8; --ok: #1e7a46; --ok-soft: #e4f4EA;
-    --warn: #9a6700; --warn-soft: #fff4d6; --border: #e2ded6;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #17171a; --card: #222226; --text: #f0eee9; --muted: #a2a2a8;
-      --accent: #ff7a6b; --accent-soft: #3a2220; --ok: #5fd08d; --ok-soft: #1c2e24;
-      --warn: #f0b84a; --warn-soft: #33290f; --border: #35353b;
-    }
+    --ink: #1F2328; --slate: #2B3138; --light: #F1EFEB; --accent: #D9482B; --green: #2E7D5B;
+    --amber: #C98A00; --muted: #6B7178; --softw: #C9CDD2; --gold: #F0B84A;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
-  body {
-    background: var(--bg); color: var(--text);
-    font: 18px/1.55 system-ui, "Segoe UI", Roboto, sans-serif;
-    display: flex; flex-direction: column;
-  }
-  header {
-    display: flex; align-items: center; gap: 16px; padding: 10px 24px;
-    border-bottom: 1px solid var(--border); background: var(--card); font-size: 14px; color: var(--muted);
-  }
-  header strong { color: var(--text); }
-  header .spacer { flex: 1; }
-  #timer { font-variant-numeric: tabular-nums; }
-  #bar { height: 4px; background: var(--border); }
-  #bar div { height: 100%; width: 0; background: var(--accent); transition: width .25s; }
-  main {
-    flex: 1; overflow-y: auto; overflow-x: hidden; padding: 32px 24px;
-    display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; perspective: 2200px;
-  }
-  /* Alle Folien liegen übereinander, so können zwei beim Umblättern gleichzeitig sichtbar sein */
+  html, body { margin: 0; height: 100%; background: #0e0e10; overflow: hidden;
+    font-family: Calibri, Carlito, "Segoe UI", Arial, sans-serif; }
+  #deck { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: center; }
+  #stack { position: absolute; inset: 0; perspective: 2200px; background: #fff; overflow: hidden; }
   .slide {
-    grid-area: 1 / 1; width: 100%; max-width: 880px; margin: 0 auto;
-    visibility: hidden; opacity: 0; pointer-events: none;
-    transform-origin: left center; backface-visibility: hidden;
+    position: absolute; inset: 0; background: #fff; color: var(--ink); overflow: hidden;
+    visibility: hidden; opacity: 0; pointer-events: none; transform-origin: left center; backface-visibility: hidden;
   }
+  .slide.dark { background: var(--ink); color: #fff; }
   .slide.active { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
   .slide.under { visibility: visible; opacity: 1; z-index: 1; }
-  .slide.turning { background: var(--bg); box-shadow: 0 0 0 24px var(--bg), -14px 0 44px rgba(0,0,0,.35); }
+  .slide.turning { box-shadow: -14px 0 44px rgba(0,0,0,.35); }
   .slide.out-next { visibility: visible; opacity: 1; z-index: 3; animation: turnOut .9s cubic-bezier(.45,.05,.55,.95) forwards; }
   .slide.in-prev { visibility: visible; opacity: 1; z-index: 3; animation: turnIn .9s cubic-bezier(.45,.05,.55,.95) forwards; }
-  /* Seite umblättern: Folie klappt an der linken Kante nach hinten weg bzw. wieder herein */
+  /* Seite umblättern */
   @keyframes turnOut {
     0% { transform: rotateY(0deg); filter: brightness(1); opacity: 1; }
     75% { opacity: 1; }
@@ -61,68 +37,46 @@
   }
   /* Lösungen: Wischen von links */
   @keyframes wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+  .ans { visibility: hidden; }
+  .ans.show { visibility: visible; animation: wipe .8s ease-out both; }
+  .ans.show.noanim { animation: none; }
   @media (prefers-reduced-motion: reduce) {
-    .slide.out-next, .slide.in-prev, .sol-item.show { animation: none !important; }
+    .slide.out-next, .slide.in-prev, .ans.show { animation: none !important; }
   }
-  h1 { font-size: 2.4rem; line-height: 1.15; margin: 0 0 .4em; }
-  h2 { font-size: 1.7rem; margin: 0 0 .3em; }
-  .tag {
-    display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
-    color: var(--accent); background: var(--accent-soft); padding: 3px 10px; border-radius: 99px; margin-bottom: 12px;
-  }
-  .lead { color: var(--muted); font-size: 1.15rem; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px; margin: 16px 0; }
-  .card h3 { margin: 0 0 6px; font-size: 1rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-  .card p, .card ul { margin: 0; }
-  .card ul { padding-left: 1.2em; }
-  .card li { margin: 4px 0; }
-  .question { background: var(--warn-soft); border-color: transparent; }
-  .question h3 { color: var(--warn); }
-  .solution { background: var(--ok-soft); border-color: transparent; display: none; }
-  .solution h3 { color: var(--ok); }
-  .solution.show { display: block; }
-  .sol { list-style: none; padding: 0; margin: 0; }
-  .sol-item { display: none; gap: 12px; align-items: flex-start; margin: 10px 0; }
-  .sol-item.show { display: flex; animation: wipe .8s ease-out both; }
-  .qn {
-    flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--ok); color: var(--bg);
-    font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-top: 2px;
-  }
-  button.reveal {
-    font: inherit; font-weight: 600; cursor: pointer; border: 0; border-radius: 10px;
-    background: var(--accent); color: #fff; padding: 10px 18px;
-  }
-  button.reveal:hover { filter: brightness(1.08); }
-  .note { font-size: 14px; color: var(--muted); margin-top: 24px; }
-  .agenda { list-style: none; padding: 0; margin: 0; }
-  .agenda li { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-  .agenda .min { width: 64px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  footer {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 10px 24px; border-top: 1px solid var(--border); background: var(--card); font-size: 14px; color: var(--muted);
-  }
-  footer button {
-    font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--text);
-    border-radius: 8px; padding: 6px 14px;
-  }
-  footer button:disabled { opacity: .4; cursor: default; }
-  @media (max-width: 600px) { body { font-size: 16px; } h1 { font-size: 1.8rem; } main { padding: 20px 16px; } }
+
+  .abs { position: absolute; }
+  .head { font-family: Cambria, "Cambria Math", Georgia, serif; font-weight: 700; }
+  .ttl { display: flex; align-items: center; font-size: 42.67px; line-height: 1.15; }
+  .pill { display: flex; align-items: center; justify-content: center; border-radius: 99px; color: #fff; font-weight: 700; font-size: 16px; background: var(--accent); }
+  .lbl { font-size: 16px; font-weight: 700; text-transform: uppercase; }
+  .badge { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; flex: none; }
+  .foot { font-size: 13.33px; color: var(--muted); }
+  .dark .foot { color: var(--softw); }
+  .card { border-radius: 19px; }
+  .row { display: flex; align-items: flex-start; background: var(--light); border-radius: 12px; margin-bottom: 11.5px; padding: 15px 19px 16px; }
+  .row .q { font-weight: 700; margin-left: 17px; width: 259px; flex: none; }
+  .row .a { margin-left: 24px; width: 778px; flex: none; }
+  a { color: var(--accent); }
+  table { border-collapse: collapse; }
+  td, th { padding: 0 8px 0 12px; height: 48px; font-size: 18.67px; text-align: left; }
+  th { background: var(--slate); color: #fff; }
+  tr:nth-child(odd) td { background: var(--light); }
+
+  #bar { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center;
+    background: rgba(30,30,34,.9); color: #ddd; border-radius: 10px; padding: 6px 12px; font: 14px system-ui, sans-serif;
+    opacity: 0; transition: opacity .25s; z-index: 10; }
+  body:hover #bar { opacity: .95; }
+  #bar button { font: inherit; color: #fff; background: #3a3a40; border: 0; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  #bar button:disabled { opacity: .4; cursor: default; }
 </style>
 </head>
 <body>
-<header>
-  <strong>Kniffelige Fälle aus der Praxis</strong>
-  <span class="spacer"></span>
-  <span>Laufzeit: <span id="timer">00:00</span></span>
-</header>
-<div id="bar"><div></div></div>
-<main id="stage"></main>
-<footer>
-  <button id="prev">← Zurück</button>
-  <span id="counter"></span>
-  <span>Tasten: ← → · Leertaste = Lösung</span>
-  <button id="next">Weiter →</button>
-</footer>
+<div id="deck"><div id="stack"></div></div>
+<div id="bar">
+  <button id="prev" type="button">←</button><span id="counter"></span><button id="next" type="button">→</button>
+  <button id="fs" type="button" title="Vollbild (F)">⛶</button>
+  <span>Klick / Leertaste = weiter</span>
+</div>
 
 <script>
 const cases = [
@@ -269,161 +223,220 @@ const cases = [
   }
 ];
 
-const slides = [];
+const P = n => Math.round(n * 96) + "px";
+const PT = n => (n * 96 / 72).toFixed(2) + "px";
+const st = (x, y, w, h, extra = "") =>
+  `left:${P(x)};top:${P(y)}${w != null ? `;width:${P(w)}` : ""}${h != null ? `;height:${P(h)}` : ""};${extra}`;
 
-slides.push(`
-  <section class="slide">
-    <span class="tag">Schulung · ca. 60 Minuten</span>
-    <h1>Kniffelige Fälle aus der Praxis</h1>
-    <p class="lead">Neun realistische Situationen aus dem Alltag von Schornsteinfegerinnen und Schornsteinfegern. Erst gemeinsam überlegen, dann die Lösung aufdecken.</p>
-    <div class="card">
-      <h3>So läuft es ab</h3>
-      <ul>
-        <li>Fall lesen und die Fragen in der Gruppe diskutieren (ca. 3 Minuten)</li>
-        <li>Mit der <strong>Leertaste</strong> oder dem Button die Lösung zeigen</li>
-        <li>Ergänzungen aus der eigenen Erfahrung sind ausdrücklich erwünscht</li>
-      </ul>
-    </div>
-    <p class="note">Hinweis: Die Lösungen sind Diskussionsgrundlagen. Maßgeblich sind immer der aktuelle Rechtsstand, Landesrecht und die Vorgaben der zuständigen Behörde.</p>
-  </section>`);
+const title = (label, dark = false, w = 10.2) =>
+  `<div class="abs head ttl" style="${st(0.6, 0.45, w, 0.9)}">${label}</div>`;
+const pill = (x, y, w, h, label, bg = "") =>
+  `<div class="abs pill" style="${st(x, y, w, h, bg ? "background:" + bg : "")}">${label}</div>`;
+const footer = (n, total) =>
+  `<div class="abs foot" style="${st(0.6, 7.0, 8, 0.25)}">Kniffelige Fälle aus der Praxis</div>` +
+  `<div class="abs foot" style="${st(11.7, 7.0, 1.0, 0.25, "text-align:right")}">${n} / ${total}</div>`;
+const badge = (x, y, d, label, bg = "", size = 16) =>
+  `<div class="abs badge" style="${st(x, y, d, d, `font-size:${PT(size)}` + (bg ? ";background:" + bg : ""))}">${label}</div>`;
+const circles = (cx, cy, radii, color) =>
+  `<svg class="abs" style="left:0;top:0" width="1280" height="720" viewBox="0 0 1280 720">` +
+  radii.map(r => `<circle cx="${cx * 96}" cy="${cy * 96}" r="${r * 96}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="6 5"/>`).join("") +
+  `</svg>`;
 
-slides.push(`
-  <section class="slide">
-    <span class="tag">Überblick</span>
-    <h2>Agenda</h2>
-    <div class="card">
-      <ul class="agenda">
-        <li><span class="min">5 min</span><span>Einstieg und Ablauf</span></li>
-        ${cases.map((c, i) => `<li><span class="min">${c.min} min</span><span>Fall ${i + 1}: ${c.title}</span></li>`).join("")}
-        <li><span class="min">7 min</span><span>Zusammenfassung und Austausch</span></li>
-      </ul>
-    </div>
-  </section>`);
+// ----- Aufteilung der Lösungsfolien (wie in der PowerPoint) -----
+const QW = 2.7, AW = 8.1, MAXH = 4.95;
+const estLines = (t, w, size) => Math.max(1, Math.ceil(t.length / (w * 72 / (0.45 * size))));
+const rowHeights = (c, idxs, size) =>
+  idxs.map(qi => Math.max(estLines(c.question[qi], QW, size), estLines(c.solution[qi], AW, size)) * size * 1.2 / 72 + 0.34);
+function plan(c) {
+  const n = c.question.length, all = [...Array(n).keys()];
+  for (const size of [17, 16, 15, 14]) {
+    if (rowHeights(c, all, size).reduce((a, b) => a + b, 0) + 0.12 * (n - 1) <= MAXH) return { chunks: [all], sizes: [size] };
+  }
+  const hs = rowHeights(c, all, 15), chunks = [];
+  let cur = [], h = 0;
+  for (const qi of all) {
+    let add = hs[qi] + (cur.length ? 0.12 : 0);
+    if (cur.length && h + add > MAXH) { chunks.push(cur); cur = []; h = 0; add = hs[qi]; }
+    cur.push(qi); h += add;
+  }
+  chunks.push(cur);
+  return { chunks, sizes: chunks.map(() => 15) };
+}
 
+const total = 2 + cases.reduce((s, c) => s + 1 + plan(c).chunks.length, 0) + 3;
+const slides = [];   // { html, dark }
+const add = (html, dark = false) => slides.push({ html, dark });
+const num = () => slides.length + 1;
+
+// ===== Folie 1: Titel =====
+add(`
+  ${circles(11.2, 3.4, [1.3, 2.3, 3.3], "#5A3A35")}
+  <div class="abs" style="left:${11.2 * 96 - 11.5}px;top:${3.4 * 96 - 11.5}px;width:23px;height:23px;border-radius:50%;background:var(--accent)"></div>
+  ${pill(0.8, 1.7, 3.0, 0.42, "SCHULUNG · CA. 1 STUNDE")}
+  <div class="abs head" style="${st(0.8, 2.4, 8.2, 2.2, `font-size:${PT(54)};line-height:1.15`)}">Kniffelige Fälle aus der Praxis</div>
+  <div class="abs" style="${st(0.8, 4.55, 7.8, 1.0, `font-size:${PT(18)};color:var(--softw)`)}">Neun realistische Situationen aus dem Alltag von Schornsteinfegerinnen und Schornsteinfegern – erst gemeinsam überlegen, dann die Lösung besprechen.</div>
+  <div class="abs" style="${st(0.8, 6.55, 8, 0.3, `font-size:${PT(14)};color:var(--softw)`)}">Schulung · 05.11.2026</div>`, true);
+
+// ===== Folie 2: Agenda =====
+{
+  const items = [["5 min", "Einstieg und Ablauf"], ...cases.map((c, i) => [c.min + " min", `Fall ${i + 1}: ${c.title}`]), ["7 min", "Zusammenfassung und Austausch"]];
+  const sum = 5 + cases.reduce((s, c) => s + c.min, 0) + 7;
+  let cards = "";
+  items.forEach((it, k) => {
+    const col = k < 6 ? 0 : 1, ri = k < 6 ? k : k - 6;
+    const x = 0.6 + col * 6.2, y = 1.65 + ri * 0.78;
+    cards += `<div class="abs" style="${st(x, y, 5.95, 0.68, "background:var(--light);border-radius:14px")}"></div>
+      <div class="abs" style="${st(x + 0.2, y, 0.95, 0.68, `display:flex;align-items:center;font-weight:700;color:var(--accent);font-size:${PT(16)}`)}">${it[0]}</div>
+      <div class="abs" style="${st(x + 1.2, y, 4.6, 0.68, `display:flex;align-items:center;font-size:${PT(16)}`)}">${it[1]}</div>`;
+  });
+  add(`${title("Ablauf der Schulung")}${cards}
+    <div class="abs" style="${st(0.6, 6.4, 12.1, 0.45, `font-size:${PT(12)};color:var(--muted)`)}">Summe: ca. ${sum} Minuten – bei Bedarf einzelne Fälle kürzen oder weglassen. Die Lösungen sind Diskussionsgrundlagen; maßgeblich sind Rechtsstand, Landesrecht und Vorgaben der Behörde.</div>
+    ${footer(num(), total)}`);
+}
+
+// ===== Fälle + Lösungsfolien =====
 cases.forEach((c, i) => {
-  const list = arr => `<ul>${arr.map(x => `<li>${x}</li>`).join("")}</ul>`;
-  slides.push(`
-  <section class="slide case">
-    <span class="tag">Fall ${i + 1} von ${cases.length}</span>
-    <h2>${c.title}</h2>
-    <div class="card"><h3>Situation</h3><p>${c.scenario}</p></div>
-    <div class="card question"><h3>Zur Diskussion</h3>${list(c.question)}</div>
-    <p><button class="reveal">Lösung zeigen (0/${c.solution.length})</button></p>
-    <div class="card solution"><h3>Lösungsansatz</h3><ol class="sol">${c.solution.map((a, qi) => `<li class="sol-item"><span class="qn">${qi + 1}</span><div>${a}</div></li>`).join("")}</ol></div>
-  </section>`);
+  const nq = c.question.length, step = Math.min(1.38, 4.0 / nq), qsize = nq <= 3 ? 19 : 18;
+  let qs = "", qy = 2.45;
+  c.question.forEach((q, qi) => {
+    qs += badge(7.9, qy + 0.02, 0.42, qi + 1, "", 14) +
+      `<div class="abs" style="${st(8.5, qy, 3.95, step - 0.1, `font-size:${PT(qsize)};color:#fff`)}">${q}</div>`;
+    qy += step;
+  });
+  add(`${title(c.title)}${pill(10.95, 0.65, 1.78, 0.42, `FALL ${i + 1} VON ${cases.length}`)}
+    <div class="abs card" style="${st(0.6, 1.65, 6.7, 5.0, "background:var(--light)")}"></div>
+    <div class="abs lbl" style="${st(0.95, 1.95, 6.0, 0.3, "color:var(--accent)")}">Situation</div>
+    <div class="abs" style="${st(0.95, 2.4, 6.0, 4.0, `font-size:${PT(20)};line-height:1.32`)}">${c.scenario}</div>
+    <div class="abs card" style="${st(7.55, 1.65, 5.18, 5.0, "background:var(--slate)")}"></div>
+    <div class="abs lbl" style="${st(7.9, 1.95, 4.5, 0.3, "color:var(--gold)")}">Zur Diskussion</div>
+    ${qs}${footer(num(), total)}`);
+
+  const pl = plan(c);
+  pl.chunks.forEach((idxs, part) => {
+    const size = pl.sizes[part], many = pl.chunks.length > 1;
+    const lab = `LÖSUNG FALL ${i + 1}` + (many ? ` (${part + 1}/${pl.chunks.length})` : "");
+    const rows = idxs.map(qi => `<div class="row" style="font-size:${PT(size)};line-height:1.2">
+        <div class="badge" style="width:40px;height:40px;font-size:${PT(14)};background:var(--green);margin-top:-2px">${qi + 1}</div>
+        <div class="q">${c.question[qi]}</div><div class="a ans">${c.solution[qi]}</div></div>`).join("");
+    add(`${title(c.title)}${pill(many ? 10.55 : 10.95, 0.65, many ? 2.18 : 1.78, 0.42, lab, "var(--green)")}
+      <div class="abs" style="${st(0.6, 1.6, 12.13, null)}">${rows}</div>${footer(num(), total)}`);
+  });
 });
 
-slides.push(`
-  <section class="slide">
-    <span class="tag">Skizze zu Fall 9</span>
-    <h2>Ableitbedingungen: Abstände der Mündung</h2>
-    <div class="card" style="padding:12px">
-      <svg viewBox="0 0 640 330" role="img" aria-label="Seitenansicht: Eigenes Haus mit Schornstein, Umkreis um die Mündung und höheres Nachbarhaus mit Fenster im Umkreis" style="width:100%;height:auto;display:block">
-        <style>
-          .t { font: 13px system-ui, sans-serif; fill: var(--text); }
-          .s { font: 12px system-ui, sans-serif; fill: var(--muted); }
-          .b { font-weight: 700; }
-          .house { fill: var(--bg); stroke: var(--text); stroke-width: 2; }
-          .win { fill: var(--card); stroke: var(--text); stroke-width: 2; }
-        </style>
-        <!-- Boden -->
-        <line x1="10" y1="300" x2="630" y2="300" stroke="var(--text)" stroke-width="2"/>
-        <!-- Umkreis um die Mündung -->
-        <circle cx="148" cy="165" r="210" fill="var(--accent-soft)" fill-opacity=".5" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 5"/>
-        <!-- Eigenes Haus -->
-        <polygon class="house" points="40,300 40,225 135,185 230,225 230,300"/>
-        <!-- Schornstein -->
-        <rect x="140" y="165" width="16" height="30" class="house"/>
-        <!-- Nachbarhaus -->
-        <polygon class="house" points="300,300 300,150 430,110 560,150 560,300"/>
-        <rect class="win" x="315" y="178" width="30" height="40"/>
-        <rect class="win" x="470" y="215" width="30" height="40"/>
-        <!-- Ebene der Mündung und zulässige Fensteroberkante -->
-        <line x1="148" y1="165" x2="600" y2="165" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="3 3"/>
-        <line x1="290" y1="179" x2="600" y2="179" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="3 3"/>
-        <!-- Mündung -->
-        <circle cx="148" cy="165" r="4" fill="var(--accent)"/>
-        <!-- Maß 1 m -->
-        <line x1="596" y1="165" x2="596" y2="179" stroke="var(--text)" stroke-width="1.5"/>
-        <text class="s" x="604" y="176">1 m</text>
-        <!-- Radius -->
-        <line x1="148" y1="280" x2="358" y2="280" stroke="var(--accent)" stroke-width="1.5"/>
-        <line x1="148" y1="274" x2="148" y2="286" stroke="var(--accent)" stroke-width="1.5"/>
-        <line x1="358" y1="274" x2="358" y2="286" stroke="var(--accent)" stroke-width="1.5"/>
-        <text class="t b" x="253" y="274" text-anchor="middle" style="fill:var(--accent)">Umkreis 15 m (bis 50 kW)</text>
-        <!-- First-Überstand -->
-        <line x1="135" y1="185" x2="135" y2="165" stroke="var(--text)" stroke-width="1" stroke-dasharray="2 2"/>
-        <text class="s" x="40" y="160">≥ 40 cm über First</text>
-        <text class="s" x="40" y="174">(Maß übertrieben dargestellt)</text>
-        <!-- Beschriftungen -->
-        <text class="t b" x="135" y="317" text-anchor="middle">Eigenes Haus (Pelletheizung)</text>
-        <text class="t b" x="430" y="317" text-anchor="middle">Nachbarhaus</text>
-        <text class="s" x="360" y="160" style="fill:var(--ok)">Ebene der Mündung</text>
-        <text class="s" x="352" y="196" style="fill:var(--warn)">Fensteroberkante: max. bis hier</text>
-        <text class="t b" x="330" y="238" style="fill:var(--accent)">✗ zu hoch</text>
-        <text class="t b" x="485" y="272" style="fill:var(--ok)">✓ außerhalb</text>
-      </svg>
+// ===== Skizze =====
+add(`${title("Ableitbedingungen: Abstände der Mündung")}${pill(10.95, 0.65, 1.78, 0.42, "SKIZZE ZU FALL 9")}
+  <svg class="abs" style="${st(0.5, 1.55, 8.64, 4.86)}" viewBox="0 0 640 360" font-family="Calibri, Carlito, Segoe UI, Arial, sans-serif" font-size="12.3">
+    <line x1="10" y1="325" x2="630" y2="325" stroke="#1F2328" stroke-width="2"/>
+    <rect x="70" y="240" width="190" height="85" fill="#F1EFEB" stroke="#1F2328" stroke-width="2"/>
+    <rect x="172" y="170" width="16" height="35" fill="#F1EFEB" stroke="#1F2328" stroke-width="2"/>
+    <polygon points="60,240 165,195 270,240" fill="#F1EFEB" stroke="#1F2328" stroke-width="2"/>
+    <rect x="290" y="155" width="270" height="170" fill="#F1EFEB" stroke="#1F2328" stroke-width="2"/>
+    <polygon points="280,155 425,115 570,155" fill="#F1EFEB" stroke="#1F2328" stroke-width="2"/>
+    <circle cx="180" cy="170" r="150" fill="#D9482B" fill-opacity=".12" stroke="#D9482B" stroke-width="2" stroke-dasharray="6 5"/>
+    <rect x="294" y="176" width="26" height="40" fill="#fff" stroke="#1F2328" stroke-width="2"/>
+    <rect x="470" y="245" width="30" height="40" fill="#fff" stroke="#1F2328" stroke-width="2"/>
+    <line x1="180" y1="170" x2="600" y2="170" stroke="#2E7D5B" stroke-width="1.5" stroke-dasharray="2 3"/>
+    <line x1="285" y1="184" x2="600" y2="184" stroke="#C98A00" stroke-width="1.5" stroke-dasharray="2 3"/>
+    <circle cx="180" cy="170" r="4.4" fill="#D9482B"/>
+    <line x1="596" y1="170" x2="596" y2="184" stroke="#1F2328" stroke-width="1.5"/>
+    <text x="603" y="181" fill="#6B7178">1 m</text>
+    <line x1="180" y1="300" x2="330" y2="300" stroke="#D9482B" stroke-width="1.5"/>
+    <line x1="180" y1="294" x2="180" y2="306" stroke="#D9482B" stroke-width="1.5"/>
+    <line x1="330" y1="294" x2="330" y2="306" stroke="#D9482B" stroke-width="1.5"/>
+    <text x="225" y="272" text-anchor="middle" font-weight="700" fill="#D9482B">Umkreis 15 m</text>
+    <text x="225" y="287" text-anchor="middle" font-weight="700" fill="#D9482B">(bis 50 kW)</text>
+    <text fill="#1F2328"><tspan x="60" y="117">Mündung ≥ 40 cm</tspan><tspan x="60" y="132">über First (Maß</tspan><tspan x="60" y="147">übertrieben)</tspan></text>
+    <line x1="120" y1="154" x2="176" y2="168" stroke="#6B7178" stroke-width="1"/>
+    <text fill="#2E7D5B"><tspan x="570" y="138">Ebene der</tspan><tspan x="570" y="153">Mündung</tspan></text>
+    <text x="335" y="201" fill="#C98A00">Fensteroberkante: max. bis hier</text>
+    <text x="336" y="236" font-weight="700" fill="#D9482B">✗ zu hoch</text>
+    <text x="455" y="304" font-weight="700" fill="#2E7D5B">✓ außerhalb</text>
+    <text x="165" y="346" text-anchor="middle" font-weight="700" fill="#1F2328">Eigenes Haus (Pelletheizung)</text>
+    <text x="425" y="346" text-anchor="middle" font-weight="700" fill="#1F2328">Nachbarhaus</text>
+  </svg>
+  <div class="abs card" style="${st(9.45, 1.55, 3.3, 5.1, "background:var(--slate);border-radius:20px")}"></div>
+  <div class="abs lbl" style="${st(9.7, 1.8, 2.8, 0.3, "color:var(--gold)")}">So lesen Sie die Skizze</div>
+  <div class="abs" style="${st(9.7, 2.25, 2.85, 4.3, `font-size:${PT(14)};color:#fff;line-height:1.25`)}">
+    <p style="margin:0 0 9px"><b>Mündung:</b> firstnah, mindestens 40 cm über First. Unter 20° Dachneigung gilt ein fiktiver First mit 20°.</p>
+    <p style="margin:0 0 9px"><b>Umkreis:</b> bis 50 kW 15 m / 1 m, bis 100 kW 17 m / 2 m, bis 150 kW 19 m / 3 m, bis 200 kW 21 m / 3 m.</p>
+    <p style="margin:0"><b>Prüfung:</b> Das obere Nachbarfenster liegt im Umkreis zu hoch – nötig ist eine höhere Mündung oder die Bestimmung nach VDI 3781 Blatt 4.</p>
+  </div>
+  <div class="abs" style="${st(0.6, 6.55, 8.7, 0.4, `font-size:${PT(10)};color:var(--muted)`)}">Schematisch, nicht maßstäblich. Quelle: <a href="https://www.gesetze-im-internet.de/bimschv_1_2010/__19.html" target="_blank" rel="noopener">§ 19 Abs. 1 der 1. BImSchV</a> (Neuanlagen für feste Brennstoffe, errichtet nach dem 31.12.2021).</div>
+  ${footer(num(), total)}`);
+
+// ===== Prüf-Tool =====
+{
+  const steps = [
+    ["First", "Mündung mindestens 40 cm über dem Bezugsfirst (unter 20° Neigung: fiktiver First mit 20°)."],
+    ["Firstnähe", "Horizontalabstand zum First kleiner als zur Traufe; Höhe über First größer als Horizontalabstand zum First."],
+    ["Öffnungen", "Jede Öffnung im Umkreis wird um die geforderte Überhöhung überragt."]];
+  const st3 = steps.map((s, k) => badge(0.6, 1.95 + k * 1.2, 0.5, k + 1) +
+    `<div class="abs" style="${st(1.3, 1.9 + k * 1.2, 5.5, 1.1, `font-size:${PT(16)};line-height:1.2`)}"><b>${s[0]}:</b> ${s[1]}</div>`).join("");
+  const rows = [["Gesamtwärmeleistung", "Umkreis", "Überhöhung"], ["bis 50 kW", "15 m", "1 m"], ["über 50 bis 100 kW", "17 m", "2 m"],
+    ["über 100 bis 150 kW", "19 m", "3 m"], ["über 150 bis 200 kW", "21 m", "3 m"], ["über 200 kW", "nach VDI 3781", "Tab. 3"]];
+  const tbl = `<table class="abs" style="${st(7.3, 1.9, 5.43, null)}"><colgroup><col style="width:2.2in"><col style="width:1.75in"><col style="width:1.48in"></colgroup>` +
+    rows.map((r, k) => `<tr>${r.map(v => k === 0 ? `<th>${v}</th>` : `<td>${v}</td>`).join("")}</tr>`).join("") + `</table>`;
+  add(`${title("Prüf-Tool: Mündungshöhe nach § 19")}${pill(10.95, 0.65, 1.78, 0.42, "WERKZEUG ZU FALL 9")}
+    <div class="abs lbl" style="${st(0.6, 1.5, 6.2, 0.3, "color:var(--accent)")}">Drei Prüfschritte</div>${st3}
+    <div class="abs lbl" style="${st(7.3, 1.5, 5.4, 0.3, "color:var(--accent)")}">Umkreis und Überhöhung</div>${tbl}
+    <div class="abs card" style="${st(0.6, 5.35, 12.13, 1.2, "background:var(--light);border-radius:10px")}"></div>
+    <div class="abs" style="${st(0.9, 5.45, 11.6, 1.0, `font-size:${PT(14)};line-height:1.25;display:flex;flex-direction:column;justify-content:center`)}">
+      <div style="margin-bottom:4px"><b style="color:var(--accent)">Beispiel:</b> 30 kW, Dach 15°, First 9,00 m, Abstand Traufe–First 5 m → fiktiver First 9,48 m → Mündung mindestens 9,88 m (vorhanden 9,40 m: nicht erfüllt). Fenster mit Oberkante 8,50 m im Umkreis: Mündung ≥ 9,50 m.</div>
+      <div><b>Das interaktive Tool:</b> <a href="muendungshoehe.html" target="_blank">Prüf-Tool öffnen →</a> Es prüft die Standardanforderungen, ersetzt aber keine Berechnung nach VDI 3781 Blatt 4.</div>
     </div>
-    <div class="card">
-      <h3>So lesen Sie die Skizze</h3>
-      <ul>
-        <li><strong>Mündung:</strong> firstnah, mindestens 40 cm über dem First (bei Dachneigung unter 20° Bezug auf fiktiven First mit 20°).</li>
-        <li><strong>Umkreis:</strong> Bis 50 kW 15 m / 1 m, bis 100 kW 17 m / 2 m, bis 200 kW 19 bis 21 m / 3 m.</li>
-        <li><strong>Prüfung:</strong> Jedes Fenster, jede Tür und Lüftungsöffnung im Umkreis muss mit der Oberkante mindestens das geforderte Maß unter der Mündung liegen. Das obere Fenster im Nachbarhaus erfüllt das nicht – hier ist eine Berechnung nach VDI 3781 Blatt 4 oder eine höhere Mündung nötig.</li>
-      </ul>
-    </div>
-    <p class="note">Schematische Darstellung, nicht maßstäblich. Quelle: <a href="https://www.gesetze-im-internet.de/bimschv_1_2010/__19.html" target="_blank" rel="noopener">§ 19 Abs. 1 der 1. BImSchV</a> (Neuanlagen für feste Brennstoffe, errichtet nach dem 31.12.2021). Das Prüf-Tool folgt auf der nächsten Folie.</p>
-  </section>`);
+    <div class="abs" style="${st(0.6, 6.65, 12.1, 0.3, `font-size:${PT(10)};color:var(--muted)`)}">Annahmen des Tools: Satteldach, fiktiver First über Traufhöhe und Abstand Traufe–First, Umkreis als Horizontalabstand. Quelle: § 19 Abs. 1 der 1. BImSchV.</div>
+    ${footer(num(), total)}`);
+}
 
-slides.push(`
-  <section class="slide" style="max-width:960px">
-    <span class="tag">Werkzeug zu Fall 9</span>
-    <h2>Prüf-Tool: Mündungshöhe nach § 19 1. BImSchV</h2>
-    <iframe src="muendungshoehe.html" title="Prüf-Tool Mündungshöhe" style="width:100%;height:calc(100vh - 230px);min-height:480px;border:1px solid var(--border);border-radius:12px;background:var(--bg)"></iframe>
-    <p class="note"><a href="muendungshoehe.html" target="_blank">In eigenem Tab öffnen →</a> · Pfeiltasten wechseln die Folie erst, wenn der Fokus außerhalb des Tools liegt.</p>
-  </section>`);
+// ===== Fazit =====
+{
+  const pts = [
+    ["Sicherheit zuerst:", "Bei CO-Verdacht gehen Menschenrettung und Eigenschutz vor jeder Analyse."],
+    ["Zusammenspiel prüfen:", "Feuerstätte, Abgasanlage, Verbrennungsluft und Abluftgeräte nie isoliert betrachten."],
+    ["Nachweise einfordern:", "Ohne Typenschild, Berechnung oder Zulassung keine Freigabe."],
+    ["Sauber dokumentieren:", "Fristen, Gespräche und Mängel nachvollziehbar festhalten."],
+    ["Grenzen kennen:", "Zwangsmaßnahmen und Streitentscheidungen liegen bei der Behörde."]];
+  const rows = pts.map((p, k) => badge(0.6, 1.55 + k * 0.8 + 0.06, 0.5, k + 1) +
+    `<div class="abs" style="${st(1.35, 1.55 + k * 0.8, 10.8, 0.65, `display:flex;align-items:center;font-size:${PT(20)};line-height:1.2`)}"><span><b>${p[0]}</b> <span style="color:var(--softw)">${p[1]}</span></span></div>`).join("");
+  add(`${circles(12.6, 6.9, [1.0, 1.9], "#5A3A35")}${title("Was wir mitnehmen", true)}${rows}
+    <div class="abs card" style="${st(0.6, 5.7, 10.5, 1.0, "background:var(--slate);border-radius:14px")}"></div>
+    <div class="abs" style="${st(0.9, 5.7, 10.0, 1.0, `display:flex;align-items:center;font-size:${PT(20)};line-height:1.2`)}"><span><b style="color:var(--gold)">Offene Runde:</b> Welchen kniffeligen Fall haben Sie selbst erlebt? Was würden Sie heute anders machen?</span></div>
+    ${footer(num(), total)}`, true);
+}
 
-slides.push(`
-  <section class="slide">
-    <span class="tag">Fazit</span>
-    <h2>Was wir mitnehmen</h2>
-    <div class="card">
-      <ul>
-        <li><strong>Sicherheit zuerst:</strong> Bei CO-Verdacht gehen Menschenrettung und Eigenschutz vor jeder Analyse.</li>
-        <li><strong>Zusammenspiel prüfen:</strong> Feuerstätte, Abgasanlage, Verbrennungsluft und Abluftgeräte nie isoliert betrachten.</li>
-        <li><strong>Nachweise einfordern:</strong> Ohne Typenschild, Berechnung oder Zulassung keine Freigabe.</li>
-        <li><strong>Sauber dokumentieren:</strong> Fristen, Gespräche und Mängel nachvollziehbar festhalten.</li>
-        <li><strong>Grenzen kennen:</strong> Zwangsmaßnahmen und Streitentscheidungen liegen bei der Behörde.</li>
-      </ul>
-    </div>
-    <div class="card question"><h3>Offene Runde</h3><p>Welchen kniffeligen Fall haben Sie selbst erlebt? Was würden Sie heute anders machen?</p></div>
-  </section>`);
-
-const stage = document.getElementById("stage");
-stage.innerHTML = slides.join("");
-const els = [...stage.querySelectorAll(".slide")];
-let idx = 0;
-try { const s = parseInt(localStorage.getItem("schulung-idx"), 10); if (s >= 0 && s < els.length) idx = s; } catch (e) {}
-
+// ================= Ablaufsteuerung =================
+const stack = document.getElementById("stack");
+stack.innerHTML = slides.map(s => `<section class="slide${s.dark ? " dark" : ""}">${s.html}</section>`).join("");
+const els = [...stack.querySelectorAll(".slide")];
 const reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-let turnTimer = null;
+let idx = 0, turnTimer = null;
+const fromHash = parseInt((location.hash || "").slice(1), 10);
+if (fromHash >= 1 && fromHash <= els.length) idx = fromHash - 1;
+
+function fit() {
+  const s = Math.min(innerWidth / 1280, innerHeight / 720);
+  document.getElementById("deck").style.transform = `translate(-50%,-50%) scale(${s})`;
+}
+addEventListener("resize", fit); fit();
+
+function resetAnswers(el, shown) {
+  el.querySelectorAll(".ans").forEach(a => { a.classList.remove("show", "noanim"); if (shown) a.classList.add("show", "noanim"); });
+}
 
 function show(n, init) {
   const from = idx;
   idx = Math.max(0, Math.min(els.length - 1, n));
-  document.getElementById("stage").scrollTop = 0;
   clearTimeout(turnTimer);
   els.forEach(el => el.classList.remove("active", "under", "turning", "out-next", "in-prev"));
+  resetAnswers(els[idx], idx < from);
   if (init || reduced || from === idx) {
     els[idx].classList.add("active");
   } else if (idx > from) {
-    // vorwärts: aktuelle Folie wird nach hinten weggeblättert, die nächste liegt darunter
     const old = els[from];
     els[idx].classList.add("active");
     old.classList.add("out-next", "turning");
     turnTimer = setTimeout(() => old.classList.remove("out-next", "turning"), 900);
   } else {
-    // zurück: die vorherige Folie klappt wieder über die aktuelle
     const neu = els[idx], old = els[from];
     neu.classList.add("in-prev", "turning");
     old.classList.add("under");
@@ -434,51 +447,34 @@ function show(n, init) {
     }, 900);
   }
   document.getElementById("counter").textContent = `${idx + 1} / ${els.length}`;
-  document.querySelector("#bar div").style.width = ((idx + 1) / els.length * 100) + "%";
   document.getElementById("prev").disabled = idx === 0;
   document.getElementById("next").disabled = idx === els.length - 1;
-  document.getElementById("stage").scrollTop = 0;
-  try { localStorage.setItem("schulung-idx", idx); } catch (e) {}
+  try { history.replaceState(null, "", "#" + (idx + 1)); } catch (e) {}
 }
 
-// Lösungen einzeln einblenden (Wischen von links); nach der letzten wieder ausblenden
-function toggleSolution(el) {
-  el = el || els[idx];
-  const sol = el.querySelector(".solution");
-  if (!sol) return;
-  const items = [...el.querySelectorAll(".sol-item")];
-  const btn = el.querySelector(".reveal");
-  let shown = items.filter(i => i.classList.contains("show")).length;
-  if (shown >= items.length) {
-    items.forEach(i => i.classList.remove("show"));
-    sol.classList.remove("show");
-    shown = 0;
-  } else {
-    sol.classList.add("show");
-    items[shown].classList.add("show");
-    shown++;
-  }
-  btn.textContent = shown >= items.length ? "Lösungen ausblenden" : `Nächste Lösung zeigen (${shown}/${items.length})`;
+// Weiter: erst die nächste Lösung einblenden, danach die nächste Folie
+function advance() {
+  const hidden = [...els[idx].querySelectorAll(".ans:not(.show)")];
+  if (hidden.length) hidden[0].classList.add("show");
+  else show(idx + 1);
 }
+function back() { show(idx - 1); }
 
-els.forEach(el => {
-  const b = el.querySelector(".reveal");
-  if (b) b.addEventListener("click", () => toggleSolution(el));
-});
-document.getElementById("prev").onclick = () => show(idx - 1);
-document.getElementById("next").onclick = () => show(idx + 1);
+document.getElementById("prev").onclick = e => { e.stopPropagation(); back(); };
+document.getElementById("next").onclick = e => { e.stopPropagation(); advance(); };
+document.getElementById("fs").onclick = e => { e.stopPropagation(); toggleFs(); };
+function toggleFs() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+}
+document.getElementById("deck").addEventListener("click", e => { if (!e.target.closest("a")) advance(); });
 document.addEventListener("keydown", e => {
-  if (e.key === "ArrowRight" || e.key === "PageDown") show(idx + 1);
-  else if (e.key === "ArrowLeft" || e.key === "PageUp") show(idx - 1);
-  else if (e.key === " " && els[idx].querySelector(".solution")) { e.preventDefault(); toggleSolution(); }
+  if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " " || e.key === "Enter") { e.preventDefault(); advance(); }
+  else if (e.key === "ArrowLeft" || e.key === "PageUp" || e.key === "Backspace") { e.preventDefault(); back(); }
+  else if (e.key === "Home") show(0);
+  else if (e.key === "End") show(els.length - 1);
+  else if (e.key === "f" || e.key === "F") toggleFs();
 });
-
-const t0 = Date.now();
-setInterval(() => {
-  const s = Math.floor((Date.now() - t0) / 1000);
-  document.getElementById("timer").textContent =
-    String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
-}, 1000);
 
 show(idx, true);
 </script>
