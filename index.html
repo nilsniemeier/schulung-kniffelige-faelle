@@ -10,40 +10,49 @@
     --amber: #C98A00; --muted: #6B7178; --softw: #C9CDD2; --gold: #F0B84A;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: #0e0e10; overflow: hidden;
+  html, body { margin: 0; height: 100%; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 38%, #54463d 0%, #2a221d 55%, #0f0c0b 100%);
     font-family: Calibri, Carlito, "Segoe UI", Arial, sans-serif; }
-  #deck { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: center; }
+  #deck { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: center;
+    box-shadow: 3px 3px 0 #e9e5dc, 6px 6px 0 #d8d3c6, 9px 9px 0 #c3bdae, 26px 34px 70px rgba(0,0,0,.7); }
   #stack { position: absolute; inset: 0; perspective: 2200px; background: #fff; overflow: hidden; }
   .slide {
-    position: absolute; inset: 0; background: #fff; color: var(--ink); overflow: hidden;
-    visibility: hidden; opacity: 0; pointer-events: none; transform-origin: left center; backface-visibility: hidden;
+    position: absolute; inset: 0; color: var(--ink); overflow: hidden;
+    background: var(--rings) no-repeat, var(--grain),
+      radial-gradient(circle at 82% 6%, #ffffff 0, #faf8f3 45%, #efeadf 100%);
+    visibility: hidden; opacity: 0; pointer-events: none;
   }
-  .slide.dark { background: var(--ink); color: #fff; }
+  .slide.dark {
+    color: #fff;
+    background: var(--grain), radial-gradient(circle at 18% 12%, #323a43 0, #1F2328 55%, #111316 100%);
+  }
   .slide.active { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
-  .slide.under { visibility: visible; opacity: 1; z-index: 1; }
-  .slide.turning { box-shadow: -14px 0 44px rgba(0,0,0,.35); }
-  .slide.out-next { visibility: visible; opacity: 1; z-index: 3; animation: turnOut .9s cubic-bezier(.45,.05,.55,.95) forwards; }
-  .slide.in-prev { visibility: visible; opacity: 1; z-index: 3; animation: turnIn .9s cubic-bezier(.45,.05,.55,.95) forwards; }
-  /* Seite umblättern */
-  @keyframes turnOut {
-    0% { transform: rotateY(0deg); filter: brightness(1); opacity: 1; }
-    75% { opacity: 1; }
-    100% { transform: rotateY(-110deg); filter: brightness(.7); opacity: 0; }
-  }
-  @keyframes turnIn {
-    0% { transform: rotateY(-110deg); filter: brightness(.7); opacity: 0; }
-    25% { opacity: 1; }
-    100% { transform: rotateY(0deg); filter: brightness(1); opacity: 1; }
-  }
+  /* Seite umblättern: Folie wird in Streifen zerlegt, die sich nacheinander biegen */
+  .curl, .seg { transform-style: preserve-3d; }
+  .curl { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+  .seg { position: absolute; top: 0; height: 720px; transform-origin: left center; }
+  .seg-front, .seg-back { position: absolute; inset: 0; backface-visibility: hidden; }
+  .seg-front { overflow: hidden; }
+  .seg-front .slide { visibility: visible; opacity: 1; pointer-events: none; }
+  .shade { position: absolute; inset: 0; background: #000; opacity: 0; }
+  .seg-back { transform: rotateY(180deg); background: linear-gradient(90deg, #e6e1d6, #f4f0e7 60%, #e3ded2); }
+  .cast { position: absolute; top: 0; height: 720px; width: 240px; z-index: 2; pointer-events: none;
+    background: linear-gradient(90deg, rgba(0,0,0,.5), rgba(0,0,0,.18) 40%, rgba(0,0,0,0)); opacity: 0; }
   /* Lösungen: Wischen von links */
   @keyframes wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
   .ans { visibility: hidden; }
   .ans.show { visibility: visible; animation: wipe .8s ease-out both; }
   .ans.show.noanim { animation: none; }
   @media (prefers-reduced-motion: reduce) {
-    .slide.out-next, .slide.in-prev, .ans.show { animation: none !important; }
+    .ans.show { animation: none !important; }
   }
 
+  /* Tiefe: Karten und Zeilen heben sich mit weichem Schatten vom Papier ab */
+  .slide:not(.dark) .card, .slide:not(.dark) .row, .slide:not(.dark) div[style*="var(--light)"], .slide:not(.dark) .pill {
+    box-shadow: 0 8px 22px rgba(60,45,30,.16), 0 1px 3px rgba(60,45,30,.12);
+  }
+  .slide:not(.dark) .card[style*="var(--slate)"] { box-shadow: 0 12px 30px rgba(20,22,26,.35); }
+  .dark .card, .dark div[style*="var(--slate)"] { box-shadow: 0 10px 28px rgba(0,0,0,.45); }
   .abs { position: absolute; }
   .head { font-family: Cambria, "Cambria Math", Georgia, serif; font-weight: 700; }
   .ttl { display: flex; align-items: center; font-size: 42.67px; line-height: 1.15; }
@@ -222,6 +231,14 @@ const cases = [
     ]
   }
 ];
+
+(() => {
+  const grain = "<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .25  0 0 0 0 .18  0 0 0 0 .1  0 0 0 .075 0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>";
+  const rings = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720' width='1280' height='720'><g fill='none' stroke='#D9482B' stroke-opacity='.24' stroke-width='1.5' stroke-dasharray='6 5'><circle cx='1240' cy='690' r='140'/><circle cx='1240' cy='690' r='250'/><circle cx='1240' cy='690' r='360'/><circle cx='1240' cy='690' r='470'/></g><circle cx='1240' cy='690' r='6' fill='#D9482B' fill-opacity='.3'/></svg>";
+  const u = s => `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
+  document.documentElement.style.setProperty('--grain', u(grain));
+  document.documentElement.style.setProperty('--rings', u(rings));
+})();
 
 const P = n => Math.round(n * 96) + "px";
 const PT = n => (n * 96 / 72).toFixed(2) + "px";
@@ -409,7 +426,7 @@ const stack = document.getElementById("stack");
 stack.innerHTML = slides.map(s => `<section class="slide${s.dark ? " dark" : ""}">${s.html}</section>`).join("");
 const els = [...stack.querySelectorAll(".slide")];
 const reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-let idx = 0, turnTimer = null;
+let idx = 0;
 const fromHash = parseInt((location.hash || "").slice(1), 10);
 if (fromHash >= 1 && fromHash <= els.length) idx = fromHash - 1;
 
@@ -423,28 +440,93 @@ function resetAnswers(el, shown) {
   el.querySelectorAll(".ans").forEach(a => { a.classList.remove("show", "noanim"); if (shown) a.classList.add("show", "noanim"); });
 }
 
+let curl = null;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const easeInOut = t => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+// Baut eine biegbare Kopie der Folie: 18 senkrechte Streifen, jeder hängt am rechten Rand des vorigen
+function buildCurl(src) {
+  const N = 18, W = 1280 / N;
+  const root = document.createElement("div"); root.className = "curl";
+  const cast = document.createElement("div"); cast.className = "cast";
+  let parent = root; const segs = [];
+  for (let i = 0; i < N; i++) {
+    const seg = document.createElement("div"); seg.className = "seg";
+    seg.style.left = (i === 0 ? 0 : W) + "px"; seg.style.width = (W + 1.5) + "px";
+    const front = document.createElement("div"); front.className = "seg-front";
+    const clone = src.cloneNode(true);
+    clone.classList.remove("active");
+    clone.querySelectorAll(".ans.show").forEach(a => a.classList.add("noanim"));
+    Object.assign(clone.style, { inset: "auto", top: "0", left: (-i * W) + "px", width: "1280px", height: "720px" });
+    const shade = document.createElement("div"); shade.className = "shade";
+    front.append(clone, shade);
+    const back = document.createElement("div"); back.className = "seg-back";
+    seg.append(front, back);
+    parent.appendChild(seg); parent = seg; segs.push({ seg, shade, back });
+  }
+  stack.append(cast, root);
+  return {
+    root, cast,
+    update(p) {
+      const th = -p * 180;                                   // Drehung um die Buchfalz
+      const per = 52 * Math.sin(Math.PI * clamp(p, 0, 1)) / N; // freier Rand hinkt hinterher: Seite biegt sich
+      let a = th, xEdge = 0;
+      segs.forEach((s, i) => {
+        if (i > 0) a += per;
+        s.seg.style.transform = `rotateY(${i === 0 ? th : per}deg)`;
+        const rad = a * Math.PI / 180;
+        xEdge += W * Math.cos(rad);
+        s.shade.style.opacity = a > -90 ? (0.55 * Math.abs(Math.sin(rad))).toFixed(3) : 0;
+        s.back.style.filter = `brightness(${(0.78 + 0.22 * Math.abs(Math.cos(rad))).toFixed(3)})`;
+      });
+      cast.style.left = Math.max(0, xEdge) + "px";
+      cast.style.opacity = (0.95 * Math.sin(Math.PI * clamp(p, 0, 1)) * clamp(xEdge / 260, 0, 1)).toFixed(3);
+    }
+  };
+}
+
+function runCurl(model, p0, p1, after) {
+  const dur = 1200, t0 = performance.now();
+  const c = {
+    raf: 0,
+    done() { model.root.remove(); model.cast.remove(); after(); }
+  };
+  curl = c;
+  model.update(p0);
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur);
+    model.update(p0 + (p1 - p0) * easeInOut(t));
+    if (t < 1) c.raf = requestAnimationFrame(step);
+    else { curl = null; c.done(); }
+  };
+  c.raf = requestAnimationFrame(step);
+}
+
+function finishTurn() {
+  if (!curl) return;
+  const c = curl; curl = null;
+  cancelAnimationFrame(c.raf);
+  c.done();
+}
+
 function show(n, init) {
+  finishTurn();
   const from = idx;
-  idx = Math.max(0, Math.min(els.length - 1, n));
-  clearTimeout(turnTimer);
-  els.forEach(el => el.classList.remove("active", "under", "turning", "out-next", "in-prev"));
+  idx = clamp(n, 0, els.length - 1);
+  els.forEach(el => el.classList.remove("active"));
   resetAnswers(els[idx], idx < from);
   if (init || reduced || from === idx) {
     els[idx].classList.add("active");
   } else if (idx > from) {
-    const old = els[from];
+    // vorwärts: die alte Folie wird als gebogene Seite nach links weggeblättert
+    const model = buildCurl(els[from]);
     els[idx].classList.add("active");
-    old.classList.add("out-next", "turning");
-    turnTimer = setTimeout(() => old.classList.remove("out-next", "turning"), 900);
+    runCurl(model, 0, 1, () => {});
   } else {
-    const neu = els[idx], old = els[from];
-    neu.classList.add("in-prev", "turning");
-    old.classList.add("under");
-    turnTimer = setTimeout(() => {
-      neu.classList.remove("in-prev", "turning");
-      neu.classList.add("active");
-      old.classList.remove("under");
-    }, 900);
+    // zurück: die vorherige Folie wird als gebogene Seite wieder aufgelegt
+    const model = buildCurl(els[idx]);
+    els[from].classList.add("active");
+    runCurl(model, 1, 0, () => { els[idx].classList.add("active"); els[from].classList.remove("active"); });
   }
   document.getElementById("counter").textContent = `${idx + 1} / ${els.length}`;
   document.getElementById("prev").disabled = idx === 0;
