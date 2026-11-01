@@ -53,6 +53,31 @@
   }
   .slide:not(.dark) .card[style*="var(--slate)"] { box-shadow: 0 12px 30px rgba(20,22,26,.35); }
   .dark .card, .dark div[style*="var(--slate)"] { box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+  /* Buchrücken links, Falz-Schatten über den Seiten */
+  #deck { margin-left: 24px; }
+  #spine {
+    position: absolute; left: -44px; top: -5px; width: 52px; height: 730px; border-radius: 14px 0 0 14px; overflow: hidden;
+    background: var(--leather), linear-gradient(90deg, #200a06 0%, #5d2318 22%, #7a3223 45%, #55200f 72%, #230b07 100%);
+    box-shadow: -10px 4px 22px rgba(0,0,0,.55), inset 0 0 0 1px rgba(0,0,0,.35);
+  }
+  #spine b { position: absolute; left: 0; right: 0; height: 5px; background: linear-gradient(180deg, #f3d885, #b98524 60%, #8a621a); box-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  #spine span {
+    position: absolute; left: 44%; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); white-space: nowrap;
+    font: 700 17px Cambria, Georgia, serif; letter-spacing: .14em; text-transform: uppercase;
+    background: linear-gradient(180deg, #f7dc8a, #d9a93c 55%, #b98524); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 1px 0 rgba(0,0,0,.7));
+  }
+  #stack { z-index: 1; }
+  #stack::after {
+    content: ""; position: absolute; inset: 0; z-index: 20; pointer-events: none;
+    background: linear-gradient(90deg, rgba(0,0,0,.34) 0, rgba(0,0,0,.14) 16px, rgba(0,0,0,.04) 44px, rgba(0,0,0,0) 80px);
+  }
+  /* Einband (Folie 1): Leder, Goldprägung */
+  .slide.cover {
+    background: var(--leather), radial-gradient(circle at 30% 18%, #7a3223 0, #5a2218 45%, #33110a 100%);
+  }
+  .gold { background: linear-gradient(180deg, #f7dc8a, #d9a93c 55%, #b98524); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 2px 1px rgba(0,0,0,.55)); }
   .abs { position: absolute; }
   .head { font-family: Cambria, "Cambria Math", Georgia, serif; font-weight: 700; }
   .ttl { display: flex; align-items: center; font-size: 42.67px; line-height: 1.15; }
@@ -80,7 +105,7 @@
 </style>
 </head>
 <body>
-<div id="deck"><div id="stack"></div></div>
+<div id="deck"><div id="spine"><b style="top:34px"></b><b style="top:50px"></b><span>Kniffelige Fälle aus der Praxis</span><b style="bottom:50px"></b><b style="bottom:34px"></b></div><div id="stack"></div></div>
 <div id="bar">
   <button id="prev" type="button">←</button><span id="counter"></span><button id="next" type="button">→</button>
   <button id="fs" type="button" title="Vollbild (F)">⛶</button>
@@ -236,6 +261,8 @@ const cases = [
   const grain = "<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .25  0 0 0 0 .18  0 0 0 0 .1  0 0 0 .075 0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>";
   const rings = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720' width='1280' height='720'><g fill='none' stroke='#D9482B' stroke-opacity='.24' stroke-width='1.5' stroke-dasharray='6 5'><circle cx='1240' cy='690' r='140'/><circle cx='1240' cy='690' r='250'/><circle cx='1240' cy='690' r='360'/><circle cx='1240' cy='690' r='470'/></g><circle cx='1240' cy='690' r='6' fill='#D9482B' fill-opacity='.3'/></svg>";
   const u = s => `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
+  const leather = "<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='l'><feTurbulence type='fractalNoise' baseFrequency='1.1 .8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .34 0'/></filter><rect width='100%' height='100%' filter='url(#l)'/></svg>";
+  document.documentElement.style.setProperty('--leather', u(leather));
   document.documentElement.style.setProperty('--grain', u(grain));
   document.documentElement.style.setProperty('--rings', u(rings));
 })();
@@ -282,17 +309,20 @@ function plan(c) {
 
 const total = 2 + cases.reduce((s, c) => s + 1 + plan(c).chunks.length, 0) + 3;
 const slides = [];   // { html, dark }
-const add = (html, dark = false) => slides.push({ html, dark });
+const add = (html, dark = false, cls = "") => slides.push({ html, dark, cls });
 const num = () => slides.length + 1;
 
-// ===== Folie 1: Titel =====
+// ===== Folie 1: Einband =====
 add(`
-  ${circles(11.2, 3.4, [1.3, 2.3, 3.3], "#5A3A35")}
-  <div class="abs" style="left:${11.2 * 96 - 11.5}px;top:${3.4 * 96 - 11.5}px;width:23px;height:23px;border-radius:50%;background:var(--accent)"></div>
-  ${pill(0.8, 1.7, 3.0, 0.42, "SCHULUNG · CA. 1 STUNDE")}
-  <div class="abs head" style="${st(0.8, 2.4, 8.2, 2.2, `font-size:${PT(54)};line-height:1.15`)}">Kniffelige Fälle aus der Praxis</div>
-  <div class="abs" style="${st(0.8, 4.55, 7.8, 1.0, `font-size:${PT(18)};color:var(--softw)`)}">Neun realistische Situationen aus dem Alltag von Schornsteinfegerinnen und Schornsteinfegern – erst gemeinsam überlegen, dann die Lösung besprechen.</div>
-  <div class="abs" style="${st(0.8, 6.55, 8, 0.3, `font-size:${PT(14)};color:var(--softw)`)}">Schulung · 05.11.2026</div>`, true);
+  <div class="abs" style="left:30px;top:0;width:8px;bottom:0;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(255,255,255,.10) 50%,rgba(0,0,0,.4))"></div>
+  <div class="abs" style="left:64px;top:36px;right:36px;bottom:36px;border:2.5px solid rgba(240,200,110,.75);border-radius:6px"></div>
+  <div class="abs" style="left:76px;top:48px;right:48px;bottom:48px;border:1px solid rgba(240,200,110,.45);border-radius:4px"></div>
+  ${circles(11.2, 3.4, [1.3, 2.3, 3.3], "rgba(240,200,110,.32)")}
+  <div class="abs" style="left:${11.2 * 96 - 11.5}px;top:${3.4 * 96 - 11.5}px;width:23px;height:23px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f7dc8a,#b98524)"></div>
+  <div class="abs" style="${st(1.1, 1.75, 4.2, 0.46, "display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(240,200,110,.8);border-radius:99px;font-weight:700;font-size:15px;letter-spacing:.12em;color:#f3d885")}">SCHULUNG · CA. 1 STUNDE</div>
+  <div class="abs head gold" style="${st(1.1, 2.45, 8.2, 2.2, `font-size:${PT(54)};line-height:1.15`)}">Kniffelige Fälle aus der Praxis</div>
+  <div class="abs" style="${st(1.1, 4.6, 7.4, 1.0, `font-size:${PT(18)};color:#ecd9b8`)}">Neun realistische Situationen aus dem Alltag von Schornsteinfegerinnen und Schornsteinfegern – erst gemeinsam überlegen, dann die Lösung besprechen.</div>
+  <div class="abs" style="${st(1.1, 6.35, 8, 0.3, `font-size:${PT(14)};color:#d7bf92;letter-spacing:.05em`)}">Schulung · 05.11.2026</div>`, true, "cover");
 
 // ===== Folie 2: Agenda =====
 {
@@ -423,7 +453,7 @@ add(`${title("Ableitbedingungen: Abstände der Mündung")}${pill(10.95, 0.65, 1.
 
 // ================= Ablaufsteuerung =================
 const stack = document.getElementById("stack");
-stack.innerHTML = slides.map(s => `<section class="slide${s.dark ? " dark" : ""}">${s.html}</section>`).join("");
+stack.innerHTML = slides.map(s => `<section class="slide${s.dark ? " dark" : ""}${s.cls ? " " + s.cls : ""}">${s.html}</section>`).join("");
 const els = [...stack.querySelectorAll(".slide")];
 const reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 let idx = 0;
@@ -431,7 +461,7 @@ const fromHash = parseInt((location.hash || "").slice(1), 10);
 if (fromHash >= 1 && fromHash <= els.length) idx = fromHash - 1;
 
 function fit() {
-  const s = Math.min(innerWidth / 1280, innerHeight / 720);
+  const s = Math.min(innerWidth / 1400, innerHeight / 800);
   document.getElementById("deck").style.transform = `translate(-50%,-50%) scale(${s})`;
 }
 addEventListener("resize", fit); fit();
@@ -476,11 +506,14 @@ function buildPeel(turn, under) {
   // umgeklappte Rückseite (Papier mit leicht durchscheinendem Spiegelbild der Vorderseite)
   const flapOuter = mk("position:absolute;inset:0;z-index:4;pointer-events:none;filter:drop-shadow(-6px 8px 10px rgba(0,0,0,.4))");
   const flapClip = mk("position:absolute;inset:0");
-  const flap = mk("position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;background:linear-gradient(90deg,#e7e2d7,#f7f3ea 50%,#e5e0d4)");
+  const isCover = turn.classList.contains("cover");
+  const flap = mk("position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;background:" + (isCover
+    ? "radial-gradient(circle at 30% 25%, #8f3b2b, #4d1c14 78%)"
+    : "linear-gradient(90deg,#e7e2d7,#f7f3ea 50%,#e5e0d4)"));
   const ghost = turn.cloneNode(true);
   ghost.classList.remove("active");
   ghost.querySelectorAll(".ans.show").forEach(a => a.classList.add("noanim"));
-  Object.assign(ghost.style, { visibility: "visible", opacity: ".08", zIndex: "auto", clipPath: "none" });
+  Object.assign(ghost.style, { visibility: "visible", opacity: isCover ? ".05" : ".08", zIndex: "auto", clipPath: "none" });
   flap.append(ghost);
   const hiRot = mk("position:absolute;left:0;top:0;width:0;height:0");
   hiRot.append(mk("position:absolute;left:-2600px;top:0;width:5200px;height:110px;background:linear-gradient(to bottom, rgba(0,0,0,.34), rgba(255,255,255,.42) 20%, rgba(0,0,0,.07) 70%, rgba(0,0,0,0))"));
@@ -527,7 +560,7 @@ function buildPeel(turn, under) {
 
 function runPeel(turn, under, p0, p1, after) {
   const model = buildPeel(turn, under);
-  const dur = 1400, t0 = performance.now();
+  const dur = 2800, t0 = performance.now();
   const c = { raf: 0, done() { model.update(p1); model.cleanup(); after(); } };
   curl = c;
   model.update(p0);
